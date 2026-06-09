@@ -1,0 +1,4 @@
+# config.py
+COSINUS_SEUIL = 0.40
+DETECTION_DUREE = 20  # minutes
+FLASK_PORT = 5000

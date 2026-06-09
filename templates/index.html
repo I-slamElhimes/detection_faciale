@@ -1,0 +1,1793 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FaceAttend — Smart Attendance System</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #060a08f1;
+        --green: #3ddc84;
+        --green-bright: #5aefa0;
+        --green-dim: rgba(61, 220, 132, 0.08);
+        --green-mid: rgba(61, 220, 132, 0.22);
+        --green-glow: rgba(61, 220, 132, 0.5);
+        --white: #eef4f0;
+        --white-dim: rgba(238, 244, 240, 0.6);
+        --muted: #7a9088;
+        --card-bg: rgba(255, 255, 255, 0.03);
+        --card-border: rgba(61, 220, 132, 0.12);
+        --glass: rgba(8, 18, 12, 0.7);
+      }
+
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--white);
+        font-family: "Inter", sans-serif;
+        overflow-x: hidden;
+        cursor: default;
+      }
+
+      /* ─── CUSTOM CURSOR ─── */
+      .cursor-dot {
+        width: 8px;
+        height: 8px;
+        background: var(--green);
+        border-radius: 50%;
+        position: fixed;
+        pointer-events: none;
+        z-index: 9999;
+        transform: translate(-50%, -50%);
+        transition:
+          transform 0.1s,
+          opacity 0.2s;
+      }
+      .cursor-ring {
+        width: 36px;
+        height: 36px;
+        border: 1px solid rgba(61, 220, 132, 0.5);
+        border-radius: 50%;
+        position: fixed;
+        pointer-events: none;
+        z-index: 9998;
+        transform: translate(-50%, -50%);
+        transition:
+          transform 0.18s ease,
+          width 0.2s,
+          height 0.2s,
+          border-color 0.2s;
+      }
+
+      /* ─── NOISE TEXTURE OVERLAY ─── */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+        pointer-events: none;
+        z-index: 1;
+        opacity: 0.4;
+      }
+
+      /* ─── AMBIENT GLOWS ─── */
+      .ambient {
+        position: fixed;
+        pointer-events: none;
+        z-index: 0;
+        border-radius: 50%;
+        filter: blur(120px);
+      }
+      .ambient-1 {
+        width: 600px;
+        height: 400px;
+        background: radial-gradient(
+          ellipse,
+          rgba(61, 220, 132, 0.07) 0%,
+          transparent 70%
+        );
+        top: -100px;
+        left: -100px;
+        animation: driftA 18s ease-in-out infinite alternate;
+      }
+      .ambient-2 {
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(
+          ellipse,
+          rgba(61, 220, 132, 0.04) 0%,
+          transparent 70%
+        );
+        bottom: 10%;
+        right: -100px;
+        animation: driftB 22s ease-in-out infinite alternate;
+      }
+      @keyframes driftA {
+        from {
+          transform: translate(0, 0) scale(1);
+        }
+        to {
+          transform: translate(80px, 60px) scale(1.15);
+        }
+      }
+      @keyframes driftB {
+        from {
+          transform: translate(0, 0) scale(1);
+        }
+        to {
+          transform: translate(-60px, -40px) scale(1.2);
+        }
+      }
+
+      /* ─── GRID BACKGROUND ─── */
+      .grid-bg {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background-image:
+          linear-gradient(rgba(61, 220, 132, 0.025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(61, 220, 132, 0.025) 1px, transparent 1px);
+        background-size: 60px 60px;
+        mask-image: radial-gradient(
+          ellipse 80% 80% at 50% 50%,
+          rgba(0, 0, 0, 0) 30%,
+          transparent 100%
+        );
+      }
+
+      /* ─── NAVBAR ─── */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 48px;
+        height: 80px;
+        background: rgba(6, 10, 8, 0.13);
+        backdrop-filter: blur(24px) saturate(1.4);
+        -webkit-backdrop-filter: blur(24px) saturate(1.4);
+        border-bottom: 1px solid rgba(9, 169, 81, 0.1);
+        animation: navSlide 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      @keyframes navSlide {
+        from {
+          transform: translateY(-100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      /* Status indicator line */
+      nav::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 1px;
+        width: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--green),
+          transparent
+        );
+        opacity: 0;
+        animation: navLine 3s ease 1s forwards;
+      }
+      @keyframes navLine {
+        from {
+          opacity: 0;
+          width: 0;
+          left: 50%;
+        }
+        to {
+          opacity: 0.4;
+          width: 100%;
+          left: 0;
+        }
+      }
+
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+      }
+      .nav-logo img {
+        height: 120px;
+        width: 250px;
+        object-fit: contain;
+        filter: drop-shadow(0 0 10px rgba(61, 220, 132, 0.2));
+        transition: filter 0.3s;
+      }
+      .nav-logo:hover img {
+        filter: drop-shadow(0 0 18px rgba(61, 220, 132, 0.5));
+      }
+
+      .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .nav-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.5px;
+        padding: 6px 14px;
+        border: 1px solid rgba(61, 220, 132, 0.08);
+        border-radius: 100px;
+        background: var(--green-dim);
+      }
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 8px var(--green);
+        animation: statusPulse 2.5s ease infinite;
+      }
+      @keyframes statusPulse {
+        0%,
+        100% {
+          opacity: 1;
+          box-shadow: 0 0 8px var(--green);
+        }
+        50% {
+          opacity: 0.5;
+          box-shadow: 0 0 4px var(--green);
+        }
+      }
+
+      .nav-login {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 22px;
+        background: var(--green);
+        color: #060a08;
+        font-family: "Inter", sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        text-decoration: none;
+        letter-spacing: 0.3px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.25s;
+      }
+      .nav-login::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          135deg,
+          transparent 40%,
+          rgba(255, 255, 255, 0.15) 100%
+        );
+      }
+      .nav-login:hover {
+        background: var(--green-bright);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(61, 220, 132, 0.35);
+      }
+
+      /* ─── HERO ─── */
+      .hero {
+        position: relative;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+      }
+
+      .hero-bg {
+        position: absolute;
+        inset: 0;
+        background-image: url("{{ url_for('static', filename='BG.png') }}");
+        background-size: cover;
+        background-position: center right;
+        background-repeat: no-repeat;
+        transform-origin: center;
+        animation: heroZoom 20s ease-in-out infinite alternate;
+      }
+      @keyframes heroZoom {
+        from {
+          transform: scale(1);
+        }
+        to {
+          transform: scale(1.04);
+        }
+      }
+
+      .hero-bg::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          105deg,
+          rgba(6, 10, 8, 0.751) 0%,
+          rgba(6, 10, 8, 0.526) 40%,
+          rgba(6, 10, 8, 0.281) 65%,
+          rgba(6, 10, 8, 0.392) 100%
+        );
+      }
+      .hero-bg::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            ellipse 55% 70% at 15% 55%,
+            rgba(61, 220, 132, 0.07) 0,
+            transparent 65%
+          ),
+          radial-gradient(
+            ellipse 30% 50% at 80% 30%,
+            rgba(61, 220, 132, 0.03) 0,
+            transparent 60%
+          );
+      }
+
+      /* Scan line */
+      .scan-line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          var(--green) 30%,
+          var(--green) 70%,
+          transparent 100%
+        );
+        opacity: 0;
+        animation: scan 6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        pointer-events: none;
+        z-index: 3;
+      }
+      @keyframes scan {
+        0% {
+          top: 80px;
+          opacity: 0;
+        }
+        5% {
+          opacity: 0.15;
+        }
+        95% {
+          opacity: 0.15;
+        }
+        100% {
+          top: 100%;
+          opacity: 0;
+        }
+      }
+
+      /* Corner brackets */
+      .bracket {
+        position: absolute;
+        width: 48px;
+        height: 48px;
+        opacity: 0;
+        animation: bracketIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1.2s forwards;
+        z-index: 3;
+      }
+      @keyframes bracketIn {
+        from {
+          opacity: 0;
+          transform: scale(0.7);
+        }
+        to {
+          opacity: 0.35;
+          transform: scale(1);
+        }
+      }
+      .bracket.tl {
+        top: 96px;
+        left: 32px;
+        border-top: 1.5px solid var(--green);
+        border-left: 1.5px solid var(--green);
+      }
+      .bracket.tr {
+        top: 96px;
+        right: 32px;
+        border-top: 1.5px solid var(--green);
+        border-right: 1.5px solid var(--green);
+      }
+      .bracket.bl {
+        bottom: 32px;
+        left: 32px;
+        border-bottom: 1.5px solid var(--green);
+        border-left: 1.5px solid var(--green);
+      }
+      .bracket.br {
+        bottom: 32px;
+        right: 32px;
+        border-bottom: 1.5px solid var(--green);
+        border-right: 1.5px solid var(--green);
+      }
+
+      /* Hero content */
+      .hero-content {
+        position: relative;
+        z-index: 4;
+        padding: 120px 80px 80px;
+        max-width: 720px;
+      }
+
+      /* Staggered entrance */
+      .hero-content > * {
+        opacity: 0;
+        transform: translateY(30px);
+        animation: enterUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      @keyframes enterUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .hero-badge {
+        animation-delay: 0.3s;
+      }
+      .hero-eyebrow {
+        animation-delay: 0.45s;
+      }
+      .hero h1 {
+        animation-delay: 0.55s;
+      }
+      .hero-divider {
+        animation-delay: 0.7s;
+      }
+      .hero p {
+        animation-delay: 0.8s;
+      }
+      .hero-pills {
+        animation-delay: 0.95s;
+      }
+      .hero-cta {
+        animation-delay: 1.1s;
+      }
+      .hero-metrics {
+        animation-delay: 1.25s;
+      }
+
+      .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 3.5px;
+        text-transform: uppercase;
+        color: var(--green);
+        border: 1px solid rgba(61, 220, 132, 0.2);
+        padding: 7px 16px 7px 12px;
+        border-radius: 100px;
+        margin-bottom: 32px;
+        background: rgba(61, 220, 132, 0.06);
+        backdrop-filter: blur(8px);
+      }
+      .badge-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 10px var(--green-glow);
+        animation: statusPulse 2s ease infinite;
+      }
+
+      .hero-eyebrow {
+        font-size: 12px;
+        font-weight: 200;
+        color: var(--muted);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 16px;
+      }
+
+      .hero h1 {
+        font-family: "Syne", sans-serif;
+        font-size: clamp(48px, 5.5vw, 82px);
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -3px;
+        margin-bottom: 0;
+        color: var(--white);
+      }
+      .hero h1 em {
+        font-style: normal;
+        color: transparent;
+        -webkit-text-stroke: 1.5px rgba(238, 244, 240, 0.35);
+      }
+      .hero h1 .accent {
+        color: var(--green);
+        position: relative;
+        display: inline-block;
+      }
+      .hero h1 .accent::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        bottom: 4px;
+        width: 100px;
+        height: 2px;
+        background: linear-gradient(90deg, var(--green), transparent);
+        transform-origin: left;
+        animation: lineExpand 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.2s both;
+      }
+      @keyframes lineExpand {
+        from {
+          transform: scaleX(0);
+        }
+        to {
+          transform: scaleX(1);
+        }
+      }
+
+      .hero-divider {
+        width: 1px;
+        height: 60px;
+        background: linear-gradient(180deg, var(--green), transparent);
+        margin: 32px 0;
+        opacity: 0.5;
+      }
+
+      .hero p {
+        font-size: 15.5px;
+        line-height: 1.8;
+        color: var(--white-dim);
+        max-width: 460px;
+        margin-bottom: 40px;
+        font-weight: 300;
+      }
+
+      /* Pills */
+      .hero-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 44px;
+      }
+      .pill {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 16px;
+        border: 1px solid rgba(61, 220, 132, 0.1);
+        border-radius: 100px;
+        background: rgba(255, 255, 255, 0.025);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--white-dim);
+        backdrop-filter: blur(8px);
+        letter-spacing: 0.3px;
+        transition: all 0.25s;
+        cursor: default;
+      }
+      .pill:hover {
+        border-color: rgba(61, 220, 132, 0.4);
+        background: rgba(61, 220, 132, 0.07);
+        color: var(--white);
+        transform: translateY(-1px);
+      }
+      .pill svg {
+        color: var(--green);
+        flex-shrink: 0;
+      }
+
+      /* CTA */
+      .hero-cta {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-bottom: 56px;
+      }
+
+      .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        padding: 14px 30px;
+        background: var(--green);
+        color: #060a08;
+        font-family: "Inter", sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        text-decoration: none;
+        letter-spacing: 0.2px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s;
+      }
+      .btn-primary::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.2),
+          transparent
+        );
+        transition: left 0.5s;
+      }
+      .btn-primary:hover::before {
+        left: 100%;
+      }
+      .btn-primary:hover {
+        background: var(--green-bright);
+        box-shadow:
+          0 0 30px rgba(61, 220, 132, 0.4),
+          0 8px 24px rgba(61, 220, 132, 0.2);
+        transform: translateY(-2px);
+      }
+
+      .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 26px;
+        border: 1px solid rgba(238, 244, 240, 0.15);
+        color: var(--white-dim);
+        font-family: "Inter", sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        border-radius: 8px;
+        cursor: pointer;
+        text-decoration: none;
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(8px);
+        transition: all 0.25s;
+      }
+      .btn-secondary:hover {
+        border-color: rgba(61, 220, 132, 0.35);
+        color: var(--green);
+        background: rgba(61, 220, 132, 0.05);
+      }
+
+      /* Metrics row */
+      .hero-metrics {
+        display: flex;
+        align-items: center;
+        gap: 40px;
+        padding-top: 32px;
+        border-top: 1px solid rgba(61, 220, 132, 0.08);
+      }
+      .metric {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .metric-value {
+        font-family: "Syne", sans-serif;
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--white);
+        line-height: 1;
+        letter-spacing: -1px;
+      }
+      .metric-value span {
+        color: var(--green);
+      }
+      .metric-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--muted);
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+      .metric-sep {
+        width: 1px;
+        height: 36px;
+        background: rgba(61, 220, 132, 0.1);
+      }
+
+      /* Floating face-scan card */
+      .hero-card {
+        position: absolute;
+        right: 8%;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 4;
+        width: 260px;
+        background: rgba(8, 18, 12, 0.75);
+        backdrop-filter: blur(24px);
+        border: 1px solid rgba(61, 220, 132, 0.15);
+        border-radius: 16px;
+        padding: 24px;
+        animation:
+          cardFloat 0.9s cubic-bezier(0.16, 1, 0.3, 1) 1.4s both,
+          floatCard 6s ease-in-out 2.3s infinite;
+        box-shadow:
+          0 24px 60px rgba(0, 0, 0, 0.5),
+          0 0 0 1px rgba(61, 220, 132, 0.05);
+      }
+      @keyframes cardFloat {
+        from {
+          opacity: 0;
+          transform: translateY(calc(-50% + 30px));
+        }
+        to {
+          opacity: 1;
+          transform: translateY(-50%);
+        }
+      }
+      @keyframes floatCard {
+        0%,
+        100% {
+          transform: translateY(-50%);
+        }
+        50% {
+          transform: translateY(calc(-50% - 12px));
+        }
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+      .card-title {
+        font-family: "Syne", sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--green);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      .card-live {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 10px;
+        color: var(--muted);
+        font-weight: 500;
+        letter-spacing: 0.5px;
+      }
+      .live-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 6px var(--green);
+        animation: statusPulse 1.5s ease infinite;
+      }
+
+      /* Face scan animation */
+      .face-scan {
+        width: 100%;
+        aspect-ratio: 1;
+        border-radius: 10px;
+        background: rgba(61, 220, 132, 0.03);
+        border: 1px solid rgba(61, 220, 132, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 16px;
+      }
+      .face-icon {
+        color: rgba(61, 220, 132, 0.4);
+        position: relative;
+        z-index: 2;
+      }
+      .scan-sweep {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--green),
+          transparent
+        );
+        opacity: 0.6;
+        animation: sweep 2s ease-in-out infinite;
+        box-shadow: 0 0 10px var(--green);
+      }
+      @keyframes sweep {
+        0% {
+          top: 0%;
+          opacity: 0;
+        }
+        5% {
+          opacity: 0.6;
+        }
+        95% {
+          opacity: 0.6;
+        }
+        100% {
+          top: 100%;
+          opacity: 0;
+        }
+      }
+      /* Corner brackets in card */
+      .face-corner {
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        opacity: 0.6;
+      }
+      .face-corner.tl {
+        top: 8px;
+        left: 8px;
+        border-top: 1.5px solid var(--green);
+        border-left: 1.5px solid var(--green);
+      }
+      .face-corner.tr {
+        top: 8px;
+        right: 8px;
+        border-top: 1.5px solid var(--green);
+        border-right: 1.5px solid var(--green);
+      }
+      .face-corner.bl {
+        bottom: 8px;
+        left: 8px;
+        border-bottom: 1.5px solid var(--green);
+        border-left: 1.5px solid var(--green);
+      }
+      .face-corner.br {
+        bottom: 8px;
+        right: 8px;
+        border-bottom: 1.5px solid var(--green);
+        border-right: 1.5px solid var(--green);
+      }
+
+      .card-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .card-stat-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .stat-label {
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .stat-bar {
+        flex: 1;
+        height: 3px;
+        background: rgba(61, 220, 132, 0.08);
+        border-radius: 2px;
+        margin: 0 12px;
+        overflow: hidden;
+      }
+      .stat-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--green), var(--green-bright));
+        border-radius: 2px;
+        animation: fillBar 1.5s cubic-bezier(0.16, 1, 0.3, 1) 2s both;
+      }
+      @keyframes fillBar {
+        from {
+          width: 0 !important;
+        }
+      }
+      .stat-pct {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--green);
+        min-width: 28px;
+        text-align: right;
+      }
+
+      .card-recognized {
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(61, 220, 132, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .recog-text {
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .recog-badge {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--green);
+        background: rgba(61, 220, 132, 0.1);
+        border: 1px solid rgba(61, 220, 132, 0.2);
+        padding: 3px 10px;
+        border-radius: 100px;
+        letter-spacing: 0.5px;
+      }
+
+      /* ─── SCROLL INDICATOR ─── */
+      .scroll-hint {
+        position: absolute;
+        bottom: 36px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 4;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        opacity: 0;
+        animation: fadeIn 1s ease 2.5s forwards;
+      }
+      @keyframes fadeIn {
+        to {
+          opacity: 0.5;
+        }
+      }
+      .scroll-hint span {
+        font-size: 10px;
+        letter-spacing: 2.5px;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .scroll-mouse {
+        width: 20px;
+        height: 32px;
+        border: 1.5px solid rgba(61, 220, 132, 0.3);
+        border-radius: 10px;
+        display: flex;
+        justify-content: center;
+        padding-top: 5px;
+      }
+      .scroll-wheel {
+        width: 3px;
+        height: 6px;
+        background: var(--green);
+        border-radius: 2px;
+        animation: scrollWheel 2s ease infinite;
+      }
+      @keyframes scrollWheel {
+        0%,
+        100% {
+          transform: translateY(0);
+          opacity: 1;
+        }
+        50% {
+          transform: translateY(6px);
+          opacity: 0.3;
+        }
+      }
+
+      /* ─── FEATURES ─── */
+      .features-section {
+        position: relative;
+        z-index: 2;
+        padding: 120px 80px;
+        background: rgba(6, 10, 8, 0.98);
+        border-top: 1px solid rgba(61, 220, 132, 0.08);
+      }
+
+      .section-eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--green);
+        margin-bottom: 16px;
+      }
+      .section-eyebrow::before {
+        content: "";
+        width: 32px;
+        height: 1px;
+        background: var(--green);
+        opacity: 0.5;
+      }
+
+      .section-title {
+        font-family: "Syne", sans-serif;
+        font-size: clamp(32px, 3.5vw, 52px);
+        font-weight: 800;
+        color: var(--white);
+        letter-spacing: -2px;
+        line-height: 1.05;
+        margin-bottom: 16px;
+      }
+      .section-title em {
+        font-style: normal;
+        color: transparent;
+        -webkit-text-stroke: 1.5px rgba(238, 244, 240, 0.25);
+      }
+
+      .section-sub {
+        font-size: 15px;
+        color: var(--muted);
+        max-width: 440px;
+        line-height: 1.7;
+        margin-bottom: 72px;
+        font-weight: 300;
+      }
+
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1px;
+        background: rgba(61, 220, 132, 0.06);
+        border: 1px solid rgba(61, 220, 132, 0.06);
+        border-radius: 16px;
+        overflow: hidden;
+      }
+
+      .feat-card {
+        padding: 44px 36px;
+        background: var(--bg);
+        position: relative;
+        overflow: hidden;
+        transition: background 0.4s;
+        cursor: default;
+      }
+      .feat-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          circle at 20% 80%,
+          rgba(61, 220, 132, 0.06) 0%,
+          transparent 60%
+        );
+        opacity: 0;
+        transition: opacity 0.4s;
+      }
+      .feat-card:hover {
+        background: rgba(10, 20, 14, 0.98);
+      }
+      .feat-card:hover::before {
+        opacity: 1;
+      }
+
+      /* Number label */
+      .feat-num {
+        font-family: "Syne", sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        color: rgba(61, 220, 132, 0.25);
+        letter-spacing: 2px;
+        margin-bottom: 28px;
+      }
+
+      .feat-icon-wrap {
+        width: 48px;
+        height: 48px;
+        border: 1px solid rgba(61, 220, 132, 0.15);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 22px;
+        color: var(--green);
+        background: rgba(61, 220, 132, 0.06);
+        transition: all 0.3s;
+        position: relative;
+      }
+      .feat-card:hover .feat-icon-wrap {
+        border-color: rgba(61, 220, 132, 0.4);
+        box-shadow: 0 0 20px rgba(61, 220, 132, 0.15);
+        background: rgba(61, 220, 132, 0.1);
+      }
+
+      .feat-card h3 {
+        font-family: "Syne", sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--white);
+        margin-bottom: 12px;
+        letter-spacing: -0.3px;
+      }
+      .feat-card p {
+        font-size: 13.5px;
+        line-height: 1.7;
+        color: var(--muted);
+        font-weight: 300;
+      }
+
+      /* Arrow indicator */
+      .feat-arrow {
+        position: absolute;
+        bottom: 28px;
+        right: 28px;
+        width: 28px;
+        height: 28px;
+        border: 1px solid rgba(61, 220, 132, 0.1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(61, 220, 132, 0.3);
+        transform: translateX(-4px);
+        opacity: 0;
+        transition: all 0.3s;
+      }
+      .feat-card:hover .feat-arrow {
+        opacity: 1;
+        transform: translateX(0);
+        border-color: rgba(61, 220, 132, 0.3);
+        color: var(--green);
+      }
+
+      /* ─── FOOTER STRIP ─── */
+      .footer-strip {
+        position: relative;
+        z-index: 2;
+        border-top: 1px solid rgba(61, 220, 132, 0.06);
+        padding: 28px 80px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(6, 10, 8, 0.99);
+      }
+      .footer-copy {
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.3px;
+      }
+      .footer-copy span {
+        color: rgba(61, 220, 132, 0.6);
+      }
+      .footer-links {
+        display: flex;
+        gap: 24px;
+      }
+      .footer-links a {
+        font-size: 12px;
+        color: var(--muted);
+        text-decoration: none;
+        letter-spacing: 0.3px;
+        transition: color 0.2s;
+      }
+      .footer-links a:hover {
+        color: var(--green);
+      }
+
+      /* ─── RESPONSIVE ─── */
+      @media (max-width: 1100px) {
+        .hero-card {
+          display: none;
+        }
+        .features-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 768px) {
+        nav {
+          padding: 0 24px;
+          height: 68px;
+        }
+        .nav-logo img {
+          height: 52px;
+        }
+        .nav-status {
+          display: none;
+        }
+        .hero-content {
+          padding: 100px 28px 60px;
+        }
+        .hero h1 {
+          letter-spacing: -2px;
+        }
+        .hero-metrics {
+          gap: 24px;
+        }
+        .features-section {
+          padding: 80px 28px;
+        }
+        .features-grid {
+          grid-template-columns: 1fr;
+        }
+        .footer-strip {
+          flex-direction: column;
+          gap: 16px;
+          padding: 24px 28px;
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Ambient + grid -->
+    <div class="ambient ambient-1"></div>
+    <div class="ambient ambient-2"></div>
+    <div class="grid-bg"></div>
+
+    <!-- Custom cursor -->
+    <div class="cursor-dot" id="cursorDot"></div>
+    <div class="cursor-ring" id="cursorRing"></div>
+
+    <!-- ── NAVBAR ── -->
+    <nav>
+      <a href="#" class="nav-logo">
+        <img
+          src="{{ url_for('static', filename='LOGO.png') }}"
+          alt="FaceAttend"
+          onerror="
+            this.style.display = 'none';
+            this.nextElementSibling.style.display = 'flex';
+          "
+        />
+        <span
+          class="logo-fallback"
+          style="
+            display: none;
+            align-items: center;
+            gap: 10px;
+            font-family: &quot;Syne&quot;, sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--white);
+          "
+        >
+          Face<span style="color: var(--green)">Attend</span>
+        </span>
+      </a>
+
+      <div class="nav-right">
+        <div class="nav-status">
+          <span class="status-dot"></span>
+          Système actif
+        </div>
+        <a href="{{ url_for('auth.login') }}" class="nav-login">
+          <svg
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+          </svg>
+          Connexion
+        </a>
+      </div>
+    </nav>
+
+    <!-- ── HERO ── -->
+    <section class="hero">
+      <div class="hero-bg"></div>
+      <div class="scan-line"></div>
+      <div class="bracket tl"></div>
+      <div class="bracket tr"></div>
+      <div class="bracket bl"></div>
+      <div class="bracket br"></div>
+
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          Smart Attendance System — v2.0
+        </div>
+
+        <p class="hero-eyebrow">Reconnaissance faciale · IA · Temps réel</p>
+
+        <h1>
+          La présence,<br />
+          <em>intelligemment</em><br />
+          <span class="accent">reconnue.</span>
+        </h1>
+
+        <div class="hero-divider"></div>
+
+        <p>
+          FaceAttend automatise la gestion des présences grâce à la
+          reconnaissance faciale. Conçu pour les établissements multi-filières —
+          fiable, sécurisé, instantané.
+        </p>
+
+        <div class="hero-pills">
+          <div class="pill">
+            <svg
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              viewBox="0 0 24 24"
+            >
+              <circle cx="9" cy="7" r="4" />
+              <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            Reconnaissance Faciale
+          </div>
+          <div class="pill">
+            <svg
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            Sécurisé &amp; Chiffré
+          </div>
+          <div class="pill">
+            <svg
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              viewBox="0 0 24 24"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12,6 12,12 16,14" />
+            </svg>
+            Temps Réel
+          </div>
+          <div class="pill">
+            <svg
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              viewBox="0 0 24 24"
+            >
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+            </svg>
+            Multi-filières
+          </div>
+        </div>
+
+        <div class="hero-cta">
+          <a href="{{ url_for('auth.login') }}" class="btn-primary">
+            <svg
+              width="15"
+              height="15"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+              <polyline points="10,17 15,12 10,7" />
+              <line x1="15" y1="12" x2="3" y2="12" />
+            </svg>
+            Accéder au système
+          </a>
+          <a href="#features" class="btn-secondary">
+            Découvrir les fonctionnalités
+            <svg
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <polyline points="6,9 12,15 18,9" />
+            </svg>
+          </a>
+        </div>
+
+        <div class="hero-metrics">
+          <div class="metric">
+            <div class="metric-value">99<span>%</span></div>
+            <div class="metric-label">Précision</div>
+          </div>
+          <div class="metric-sep"></div>
+          <div class="metric">
+            <div class="metric-value">&lt;1<span>s</span></div>
+            <div class="metric-label">Détection</div>
+          </div>
+          <div class="metric-sep"></div>
+          <div class="metric">
+            <div class="metric-value">24<span>/7</span></div>
+            <div class="metric-label">Disponible</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating UI card -->
+      <div class="hero-card">
+        <div class="card-header">
+          <div class="card-title">Scan en cours</div>
+          <div class="card-live"><span class="live-dot"></span> LIVE</div>
+        </div>
+
+        <div class="face-scan">
+          <div class="face-corner tl"></div>
+          <div class="face-corner tr"></div>
+          <div class="face-corner bl"></div>
+          <div class="face-corner br"></div>
+          <div class="scan-sweep"></div>
+          <svg
+            class="face-icon"
+            width="80"
+            height="80"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1"
+            viewBox="0 0 24 24"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke-dasharray="2 2" />
+            <circle cx="12" cy="8" r="6" opacity="0.15" />
+          </svg>
+        </div>
+
+        <div class="card-stats">
+          <div class="card-stat-row">
+            <span class="stat-label">Présents</span>
+            <div class="stat-bar">
+              <div class="stat-fill" style="width: 87%"></div>
+            </div>
+            <span class="stat-pct">87%</span>
+          </div>
+          <div class="card-stat-row">
+            <span class="stat-label">Confiance</span>
+            <div class="stat-bar">
+              <div class="stat-fill" style="width: 97%"></div>
+            </div>
+            <span class="stat-pct">97%</span>
+          </div>
+        </div>
+
+        <div class="card-recognized">
+          <span class="recog-text">Statut</span>
+          <span class="recog-badge">✓ Reconnu</span>
+        </div>
+      </div>
+
+      <div class="scroll-hint">
+        <div class="scroll-mouse">
+          <div class="scroll-wheel"></div>
+        </div>
+        <span>Défiler</span>
+      </div>
+    </section>
+
+    <!-- ── FEATURES ── -->
+    <section class="features-section" id="features">
+      <div class="section-eyebrow">Fonctionnalités</div>
+      <h2 class="section-title">Tout ce dont vous<br /><em>avez besoin</em></h2>
+      <p class="section-sub">
+        Une plateforme complète pour gérer automatiquement les présences de vos
+        étudiants et enseignants.
+      </p>
+
+      <div class="features-grid">
+        <div class="feat-card">
+          <div class="feat-num">01</div>
+          <div class="feat-icon-wrap">
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              viewBox="0 0 24 24"
+            >
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </div>
+          <h3>Gestion Multi-filières</h3>
+          <p>
+            Organisez filières, groupes et emplois du temps au sein d'une
+            interface unifiée et intuitive.
+          </p>
+          <div class="feat-arrow">
+            <svg
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12,5 19,12 12,19" />
+            </svg>
+          </div>
+        </div>
+
+        <div class="feat-card">
+          <div class="feat-num">02</div>
+          <div class="feat-icon-wrap">
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              viewBox="0 0 24 24"
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+          </div>
+          <h3>Emplois du Temps</h3>
+          <p>
+            Publiez vos plannings et générez automatiquement toutes les séances
+            associées sans effort.
+          </p>
+          <div class="feat-arrow">
+            <svg
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12,5 19,12 12,19" />
+            </svg>
+          </div>
+        </div>
+
+        <div class="feat-card">
+          <div class="feat-num">03</div>
+          <div class="feat-icon-wrap">
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+              />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+          </div>
+          <h3>Caméras Intelligentes</h3>
+          <p>
+            Chaque salle dispose d'une caméra dédiée qui s'active
+            automatiquement à chaque séance.
+          </p>
+          <div class="feat-arrow">
+            <svg
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12,5 19,12 12,19" />
+            </svg>
+          </div>
+        </div>
+
+        <div class="feat-card">
+          <div class="feat-num">04</div>
+          <div class="feat-icon-wrap">
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              viewBox="0 0 24 24"
+            >
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </div>
+          <h3>Détection Automatique</h3>
+          <p>
+            Identification des étudiants et enseignants en temps réel avec
+            enregistrement instantané des présences.
+          </p>
+          <div class="feat-arrow">
+            <svg
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12,5 19,12 12,19" />
+            </svg>
+          </div>
+        </div>
+
+        <div class="feat-card">
+          <div class="feat-num">05</div>
+          <div class="feat-icon-wrap">
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              viewBox="0 0 24 24"
+            >
+              <line x1="18" y1="20" x2="18" y2="10" />
+              <line x1="12" y1="20" x2="12" y2="4" />
+              <line x1="6" y1="20" x2="6" y2="14" />
+            </svg>
+          </div>
+          <h3>Rapports &amp; Analytics</h3>
+          <p>
+            Tableaux de bord complets avec historique détaillé des séances et
+            exports en un clic.
+          </p>
+          <div class="feat-arrow">
+            <svg
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12,5 19,12 12,19" />
+            </svg>
+          </div>
+        </div>
+
+        <div class="feat-card">
+          <div class="feat-num">06</div>
+          <div class="feat-icon-wrap">
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </div>
+          <h3>Sécurité &amp; Confidentialité</h3>
+          <p>
+            Données biométriques chiffrées, accès rôle-basé et conformité RGPD
+            intégrée par conception.
+          </p>
+          <div class="feat-arrow">
+            <svg
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12,5 19,12 12,19" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── FOOTER ── -->
+    <footer class="footer-strip">
+      <div class="footer-copy">
+        © 2026 <span>FaceAttend</span>. Tous droits réservés.
+      </div>
+      <div class="footer-links">
+        <a href="#">Confidentialité</a>
+        <a href="#">Conditions</a>
+        <a href="{{ url_for('auth.login') }}">Connexion</a>
+      </div>
+    </footer>
+
+    <script>
+      // Custom cursor
+      const dot = document.getElementById("cursorDot");
+      const ring = document.getElementById("cursorRing");
+      let mouseX = 0,
+        mouseY = 0,
+        ringX = 0,
+        ringY = 0;
+
+      document.addEventListener("mousemove", (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        dot.style.left = mouseX + "px";
+        dot.style.top = mouseY + "px";
+      });
+
+      // Smooth ring follow
+      function animateCursor() {
+        ringX += (mouseX - ringX) * 0.12;
+        ringY += (mouseY - ringY) * 0.12;
+        ring.style.left = ringX + "px";
+        ring.style.top = ringY + "px";
+        requestAnimationFrame(animateCursor);
+      }
+      animateCursor();
+
+      // Hover effect on interactive elements
+      const interactives = document.querySelectorAll(
+        "a, button, .pill, .feat-card",
+      );
+      interactives.forEach((el) => {
+        el.addEventListener("mouseenter", () => {
+          ring.style.width = "52px";
+          ring.style.height = "52px";
+          ring.style.borderColor = "rgba(61,220,132,0.7)";
+          dot.style.transform = "translate(-50%,-50%) scale(0.5)";
+        });
+        el.addEventListener("mouseleave", () => {
+          ring.style.width = "36px";
+          ring.style.height = "36px";
+          ring.style.borderColor = "rgba(61,220,132,0.5)";
+          dot.style.transform = "translate(-50%,-50%) scale(1)";
+        });
+      });
+
+      // Intersection Observer for feature cards entrance
+      const cards = document.querySelectorAll(".feat-card");
+      const obs = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry, i) => {
+            if (entry.isIntersecting) {
+              entry.target.style.animation = `enterUp 0.7s cubic-bezier(0.16,1,0.3,1) ${i * 0.08}s both`;
+              entry.target.style.opacity = "0";
+              entry.target.style.transform = "translateY(24px)";
+              obs.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.15 },
+      );
+
+      cards.forEach((c) => {
+        c.style.opacity = "0";
+        obs.observe(c);
+      });
+    </script>
+  </body>
+</html>

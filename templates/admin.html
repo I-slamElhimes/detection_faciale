@@ -1,0 +1,3758 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>FaceAttend — Administration</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        /* Backgrounds — dark neutral, pas "full green" */
+        --bg:  #0a0f0d;
+        --bg2: #0d1410;
+        --bg3: #111916;
+
+        /* Surfaces glassmorphism */
+        --s1: rgba(15, 22, 18, 0.92);
+        --s2: rgba(18, 26, 21, 0.94);
+
+        /* Vert — accent seulement, pas dominant */
+        --g1: #0c9447;
+        --g2: #10b854;
+        --g3: #15d962;
+        --g4: #1aff74;
+        --g5: #074d24;
+        --g6: #052e16;
+
+        /* Silver — couleur principale de l'UI */
+        --silver:    #c8d8ce;
+        --silver2:   #a0b8ac;
+        --silver3:   #6e8a7c;
+        --silver-bg: rgba(200, 216, 206, 0.06);
+
+        /* Blanc */
+        --white:  #f0f8f4;
+        --white2: #d4e8dd;
+
+        /* Accents secondaires */
+        --teal:   #06bfa0;
+        --lime:   #7cf542;
+        --gold:   #d4af37;
+        --red:    #e84040;
+        --orange: #f59e0b;
+        --blue:   #18aaee;
+        --purple: #a78bfa;
+
+        /* Textes — blanc/silver, pas vert */
+        --text:  #e8f4ee;
+        --text2: #b8cfc4;
+        --muted: #6a8878;
+
+        /* Bordures légères silver */
+        --border:  rgba(200, 216, 206, 0.08);
+        --border2: rgba(200, 216, 206, 0.14);
+        --border3: rgba(26, 255, 116, 0.1);
+
+        --sans:   "Outfit", sans-serif;
+        --mono:   "DM Mono", monospace;
+        --radius: 14px;
+        --sw:     252px;
+        --th:     62px;
+        --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      }
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 14px;
+        line-height: 1.6;
+        display: flex;
+        min-height: 100vh;
+        cursor: none;
+        overflow-x: hidden;
+      }
+
+      /* ── BG IMG — uniquement dans la zone contenu, après sidebar et topbar ── */
+      .bg-img {
+        position: absolute;
+        top: var(--th); /* commence après la topbar */
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 0;
+        background-image: url("{{ url_for('static', filename='bg_admin.png') }}");
+        background-size: cover;
+        background-position: center top;
+        background-repeat: no-repeat;
+        opacity: 0.38;
+        pointer-events: none;
+        border-radius: 0;
+      }
+      /* bg-scene aussi limité à la zone contenu */
+      .bg-scene {
+        position: absolute;
+        top: var(--th);
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1;
+        overflow: hidden;
+        pointer-events: none;
+      }
+      .bg-scene::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse 100% 100% at 50% 50%,
+          rgba(8, 14, 11, 0.35) 0%,
+          rgba(6, 11, 9, 0.62) 65%,
+          rgba(4, 8, 6, 0.82) 100%
+        );
+      }
+      /* Le reste du contenu doit être au-dessus */
+      .topbar  { position: sticky; top: 0; z-index: 40; }
+      .page    { position: relative; z-index: 2; }
+      .section { position: relative; z-index: 2; }
+      .stats-grid { position: relative; z-index: 2; }
+      .ph      { position: relative; z-index: 2; }
+      .bg-orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(100px);
+        animation: orbFloat 22s ease-in-out infinite;
+        pointer-events: none;
+      }
+      .o1 {
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(
+          circle,
+          rgba(12, 148, 71, 0.09) 0%,
+          transparent 70%
+        );
+        top: -120px;
+        left: -80px;
+        animation-delay: 0s;
+      }
+      .o2 {
+        width: 350px;
+        height: 350px;
+        background: radial-gradient(
+          circle,
+          rgba(6, 191, 160, 0.07) 0%,
+          transparent 70%
+        );
+        bottom: -80px;
+        right: 8%;
+        animation-delay: -9s;
+      }
+      .o3 {
+        width: 240px;
+        height: 240px;
+        background: radial-gradient(
+          circle,
+          rgba(200, 216, 206, 0.04) 0%,
+          transparent 70%
+        );
+        top: 40%;
+        left: 55%;
+        animation-delay: -16s;
+      }
+      @keyframes orbFloat {
+        0%,
+        100% {
+          transform: translate(0, 0) scale(1);
+        }
+        33% {
+          transform: translate(28px, -22px) scale(1.04);
+        }
+        66% {
+          transform: translate(-18px, 18px) scale(0.97);
+        }
+      }
+
+      /* ── GRID (zone contenu seulement) ── */
+      .grid-overlay {
+        display: none; /* désactivé — la photo suffit */
+      }
+
+      /* ── NOISE ── */
+      .noise {
+        display: none;
+      }
+
+      /* ── CURSOR ── */
+      .cur-dot {
+        width: 5px;
+        height: 5px;
+        background: var(--g4);
+        border-radius: 50%;
+        position: fixed;
+        pointer-events: none;
+        z-index: 9999;
+        transform: translate(-50%, -50%);
+        box-shadow:
+          0 0 12px var(--g3),
+          0 0 24px rgba(26, 255, 116, 0.4);
+        transition: transform 0.05s;
+      }
+      .cur-ring {
+        width: 30px;
+        height: 30px;
+        border: 1.5px solid rgba(12, 148, 71, 0.5);
+        border-radius: 50%;
+        position: fixed;
+        pointer-events: none;
+        z-index: 9998;
+        transform: translate(-50%, -50%);
+        transition:
+          width 0.2s,
+          height 0.2s,
+          border-color 0.2s,
+          opacity 0.2s;
+      }
+      .cur-ring.hov {
+        width: 42px;
+        height: 42px;
+        border-color: var(--g3);
+      }
+
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--g6);
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--g5);
+      }
+
+      /* ── SIDEBAR ── */
+      .sidebar {
+        width: var(--sw);
+        flex-shrink: 0;
+        background: linear-gradient(
+          180deg,
+          rgba(10, 16, 13, 0.026) 30%,
+          rgba(8, 13, 10, 0)20%,
+          rgba(6, 10, 8, 0) 100%
+        );
+        backdrop-filter: blur(32px);
+        -webkit-backdrop-filter: blur(32px);
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 50;
+        overflow: hidden;
+        box-shadow:
+          1px 0 0 rgba(200, 216, 206, 0.08),
+          4px 0 40px rgba(0, 0, 0, 0.6);
+      }
+      /* Bordure droite silver animée */
+      .sidebar::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 1px;
+        height: 100%;
+        background: linear-gradient(
+          to bottom,
+          transparent 0%,
+          rgba(200, 216, 206, 0.12) 20%,
+          rgba(21, 217, 98, 0.4) 45%,
+          rgba(200, 216, 206, 0.15) 70%,
+          transparent 100%
+        );
+        animation: scanLine 7s ease-in-out infinite;
+        z-index: 2;
+      }
+      .sidebar::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 180px;
+        background: linear-gradient(to top, rgba(12, 148, 71, 0.06), transparent);
+        pointer-events: none;
+      }
+      @keyframes scanLine {
+        0%, 100% { opacity: 0.5; }
+        50%       { opacity: 1;   }
+      }
+
+      /* ── LOGO ── */
+      .sb-logo {
+        padding: 14px 14px 12px;
+        position: relative;
+      }
+      .sb-logo::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 14px;
+        right: 14px;
+        height: 1px;
+        background: linear-gradient(
+          to right,
+          transparent,
+          rgba(151, 234, 183, 0.049) 40%,
+          rgba(21, 217, 98, 0.2) 60%,
+          transparent
+        );
+      }
+      .logo-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 0 2px;
+      }
+      .logo-img-full {
+        width: 100%;
+        max-width: 185px;
+        height: 62px;
+        object-fit: contain;
+        filter: drop-shadow(0 0 14px rgba(12, 148, 71, 0.5)) brightness(1.1);
+        transition: filter 0.3s;
+      }
+      .logo-img-full:hover {
+        filter: drop-shadow(0 0 24px rgba(12, 148, 71, 0.9)) brightness(1.2);
+      }
+      .logo-fallback-text {
+        font-family: var(--mono);
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--white);
+        letter-spacing: -1px;
+        text-align: center;
+        padding: 10px 0;
+      }
+      .logo-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .logo-text .name {
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        color: var(--white);
+        line-height: 1;
+      }
+      .logo-text .name span { color: var(--g3); }
+      .logo-text .tag {
+        font-family: var(--mono);
+        font-size: 8px;
+        letter-spacing: 3px;
+        color: var(--silver3);
+        text-transform: uppercase;
+        margin-top: 3px;
+      }
+      .role-pill {
+        margin-top: 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        background: rgba(200, 216, 206, 0.07);
+        border: 1px solid rgba(200, 216, 206, 0.14);
+        border-radius: 20px;
+      }
+      .role-pill .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--g3);
+        box-shadow: 0 0 8px var(--g3);
+        animation: pulse 2.5s infinite;
+      }
+      .role-pill span {
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 2px;
+        color: var(--silver2);
+        text-transform: uppercase;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50%       { opacity: 0.35; }
+      }
+
+      /* ── NAV ── */
+      .nav-sec {
+        padding: 16px 18px 5px;
+        font-family: var(--mono);
+        font-size: 8px;
+        letter-spacing: 3.5px;
+        color: rgba(160, 184, 172, 0.35);
+        text-transform: uppercase;
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 10px 13px;
+        margin: 2px 10px;
+        border-radius: 10px;
+        cursor: pointer;
+        color: var(--silver2);
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        border: 1px solid transparent;
+        position: relative;
+        overflow: hidden;
+      }
+      .nav-item:hover {
+        color: var(--white);
+        background: rgba(200, 216, 206, 0.07);
+        border-color: rgba(200, 216, 206, 0.1);
+        transform: translateX(2px);
+      }
+      .nav-item.active {
+        background: linear-gradient(
+          110deg,
+          rgba(0, 0, 0, 0) 0%,
+          rgba(0, 0, 0, 0) 60%,
+          rgba(16, 19, 18, 0) 100%
+        );
+        color: #e8f8ee;
+        border-color: rgba(21, 217, 98, 0.2);
+        font-weight: 600;
+      }
+      /* Barre verte active */
+      .nav-item.active::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 18%;
+        height: 64%;
+        width: 3px;
+        background: linear-gradient(
+          to bottom,
+          var(--g3),
+          var(--teal)
+        );
+        border-radius: 0 3px 3px 0;
+        box-shadow: 0 0 10px rgba(21, 217, 98, 0.5);
+      }
+      .nav-item svg {
+        width: 15px;
+        height: 15px;
+        flex-shrink: 0;
+        opacity: 0.7;
+        transition: opacity 0.2s, transform 0.2s;
+      }
+      .nav-item:hover svg { opacity: 1; }
+      .nav-item.active svg {
+        opacity: 1;
+        color: var(--g3);
+      }
+      .nav-badge {
+        margin-left: auto;
+        font-family: var(--mono);
+        font-size: 9px;
+        background: rgba(200, 216, 206, 0.1);
+        color: var(--silver2);
+        border: 1px solid rgba(200, 216, 206, 0.15);
+        border-radius: 20px;
+        padding: 1px 7px;
+      }
+      .nav-badge.red {
+        background: rgba(232, 64, 64, 0.12);
+        color: var(--red);
+        border-color: rgba(232, 64, 64, 0.22);
+      }
+      .sb-spacer { flex: 1; }
+
+      /* ── SIDEBAR FOOTER ── */
+      .sb-footer {
+        padding: 12px 14px 18px;
+        position: relative;
+      }
+      .sb-footer::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 14px;
+        right: 14px;
+        height: 1px;
+        background: linear-gradient(
+          to right,
+          transparent,
+          rgba(200, 216, 206, 0.15) 50%,
+          transparent
+        );
+      }
+      .admin-card {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 11px;
+        background: rgba(200, 216, 206, 0.05);
+        border: 1px solid rgba(200, 216, 206, 0);
+      }
+      .admin-av {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+        background: linear-gradient(135deg, var(--g1), var(--g5));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 14px;
+        color: #fff;
+        box-shadow: 0 0 14px rgba(12, 148, 71, 0.35);
+        flex-shrink: 0;
+      }
+      .admin-info .n {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--white);
+      }
+      .admin-info .r {
+        font-size: 9px;
+        color: var(--silver3);
+        font-family: var(--mono);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .btn-logout {
+        margin-left: auto;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--muted);
+        padding: 6px;
+        border-radius: 7px;
+        transition: all 0.2s;
+        display: flex;
+      }
+      .btn-logout:hover {
+        color: var(--red);
+        background: rgba(232, 64, 64, 0.1);
+      }
+      .btn-logout svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      /* ── MAIN ── */
+      .main {
+        margin-left: var(--sw);
+        flex: 1;
+        min-height: 100vh;
+        position: relative;
+        z-index: 1;
+        overflow: hidden;
+      }
+
+      /* ── TOPBAR ── */
+      .topbar {
+        height: var(--th);
+        padding: 0 28px;
+        border-bottom: 1px solid transparent;
+        background: linear-gradient(
+          to right,
+          rgba(3, 14, 8, 0),
+          rgba(4, 18, 10, 0)
+        );
+        backdrop-filter: blur(28px);
+        -webkit-backdrop-filter: blur(28px);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        box-shadow:
+          0 1px 0 rgba(26, 255, 116, 0.1),
+          0 1px 20px rgba(0, 0, 0, 0.3);
+      }
+      .tb-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12.5px;
+      }
+      .bc-root {
+        color: var(--silver3);
+        font-family: var(--mono);
+      }
+      .bc-sep {
+        color: rgba(200, 216, 206, 0.2);
+      }
+      .bc-cur {
+        color: var(--white);
+        font-weight: 600;
+      }
+      .tb-pill {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 4px 12px;
+        background: rgba(12, 148, 71, 0.07);
+        border: 1px solid var(--border2);
+        border-radius: 20px;
+        font-family: var(--mono);
+        font-size: 10.5px;
+        color: var(--muted);
+      }
+      .tb-pill .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--g3);
+        box-shadow: 0 0 7px var(--g3);
+        animation: pulse 2.5s infinite;
+      }
+      #clock {
+        color: var(--text2);
+      }
+      .tb-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* ── BUTTONS ── */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 16px;
+        border-radius: 9px;
+        font-family: var(--sans);
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+        overflow: hidden;
+      }
+      .btn::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.07),
+          transparent
+        );
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      .btn:hover::after {
+        opacity: 1;
+      }
+      .btn svg {
+        width: 13px;
+        height: 13px;
+        flex-shrink: 0;
+      }
+      .btn-primary {
+        background: linear-gradient(
+          135deg,
+          #0c9447 0%,
+          #10b854 45%,
+          #06bfa0 100%
+        );
+        color: #fff;
+        box-shadow:
+          0 4px 18px rgba(12, 148, 71, 0.38),
+          0 1px 0 rgba(255, 255, 255, 0.12) inset,
+          0 -1px 0 rgba(0, 0, 0, 0.2) inset;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow:
+          0 8px 28px rgba(12, 148, 71, 0.5),
+          0 2px 8px rgba(6, 191, 160, 0.2);
+        background: linear-gradient(
+          135deg,
+          #0ea050 0%,
+          #13c85c 45%,
+          #07d4b2 100%
+        );
+      }
+      .btn-primary:active {
+        transform: translateY(0);
+      }
+      .btn-ghost {
+        background: rgba(12, 148, 71, 0.07);
+        color: var(--muted);
+        border: 1px solid var(--border2);
+      }
+      .btn-ghost:hover {
+        background: rgba(12, 148, 71, 0.13);
+        color: var(--text2);
+        border-color: rgba(12, 148, 71, 0.38);
+      }
+      .btn-danger {
+        background: rgba(232, 64, 64, 0.08);
+        color: var(--red);
+        border: 1px solid rgba(232, 64, 64, 0.2);
+      }
+      .btn-danger:hover {
+        background: rgba(232, 64, 64, 0.15);
+      }
+      .btn-warn {
+        background: rgba(245, 158, 11, 0.08);
+        color: var(--orange);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+      }
+      .btn-warn:hover {
+        background: rgba(245, 158, 11, 0.15);
+      }
+      .btn-teal {
+        background: rgba(6, 191, 160, 0.1);
+        color: var(--teal);
+        border: 1px solid rgba(6, 191, 160, 0.22);
+      }
+      .btn-teal:hover {
+        background: rgba(6, 191, 160, 0.18);
+      }
+      .btn-sm {
+        padding: 5px 11px;
+        font-size: 11.5px;
+      }
+      .btn-xs {
+        padding: 3px 9px;
+        font-size: 10.5px;
+      }
+
+      /* ── PAGES ── */
+      .page {
+        display: none;
+        padding: 26px 28px;
+      }
+      .page.active {
+        display: block;
+        animation: pageIn 0.36s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      @keyframes pageIn {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* ── PAGE HEADER ── */
+      .ph {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 26px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid rgba(12, 148, 71, 0.1);
+        position: relative;
+      }
+      .ph::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 72px;
+        height: 1px;
+        background: linear-gradient(to right, var(--g3), transparent);
+      }
+      .ph-tag {
+        font-family: var(--mono);
+        font-size: 8.5px;
+        letter-spacing: 3.5px;
+        color: var(--g2);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+      .ph-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--white);
+        letter-spacing: -0.5px;
+        line-height: 1.1;
+      }
+      .ph-sub {
+        font-size: 11.5px;
+        color: var(--silver3);
+        font-family: var(--mono);
+        margin-top: 5px;
+      }
+      .ph-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-shrink: 0;
+      }
+
+      /* ── STAT CARDS ── */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 22px;
+      }
+      .sc {
+        background: rgba(14, 20, 17, 0.75);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(200, 216, 206, 0.1);
+        border-radius: var(--radius);
+        padding: 20px 22px;
+        position: relative;
+        overflow: hidden;
+        transition:
+          transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+          box-shadow 0.25s,
+          border-color 0.25s;
+        cursor: default;
+      }
+      .sc:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
+        border-color: rgba(200, 216, 206, 0.18);
+      }
+      .sc::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        border-radius: var(--radius) var(--radius) 0 0;
+      }
+      .sc.cg::before { background: linear-gradient(90deg, var(--g1), var(--g4)); }
+      .sc.ct::before { background: linear-gradient(90deg, var(--teal), var(--blue)); }
+      .sc.cl::before { background: linear-gradient(90deg, #5dc928, var(--lime)); }
+      .sc.cd::before { background: linear-gradient(90deg, var(--silver3), var(--silver)); }
+      .sc-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 14px;
+        border: 1px solid rgba(200, 216, 206, 0.12);
+        background: rgba(200, 216, 206, 0.07);
+        color: var(--silver2);
+      }
+      .sc.cg .sc-icon { color: var(--g3); background: rgba(12, 148, 71, 0.1); }
+      .sc.ct .sc-icon { color: var(--teal); background: rgba(6, 191, 160, 0.1); }
+      .sc.cl .sc-icon { color: var(--lime); background: rgba(124, 245, 66, 0.08); }
+      .sc.cd .sc-icon { color: var(--silver); background: rgba(200, 216, 206, 0.08); }
+      .sc-icon svg {
+        width: 17px;
+        height: 17px;
+      }
+      .sc-n {
+        font-family: var(--mono);
+        font-size: 30px;
+        font-weight: 500;
+        color: var(--white);
+        line-height: 1;
+        letter-spacing: -1px;
+      }
+      .sc-label {
+        font-size: 11px;
+        color: var(--silver3);
+        margin-top: 5px;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+      }
+      .sc-delta {
+        margin-top: 10px;
+        font-family: var(--mono);
+        font-size: 9.5px;
+        color: var(--g2);
+      }
+
+      /* ── SECTION ── */
+      .section {
+        background: rgba(12, 18, 14, 0.65);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-bottom: 18px;
+        overflow: hidden;
+      }
+      .sh {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .sh h3 {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--white);
+        letter-spacing: 0.2px;
+      }
+      .sh-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      /* ── TABLE ── */
+      .tw {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      thead tr {
+        background: rgba(12, 148, 71, 0.06);
+      }
+      th {
+        padding: 11px 16px;
+        text-align: left;
+        font-size: 10.5px;
+        font-weight: 600;
+        font-family: var(--mono);
+        letter-spacing: 1.5px;
+        color: var(--silver3);
+        text-transform: uppercase;
+        white-space: nowrap;
+        border-bottom: 1px solid var(--border);
+      }
+      td {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgba(12, 148, 71, 0.05);
+        font-size: 13px;
+        vertical-align: middle;
+      }
+      tbody tr:last-child td {
+        border-bottom: none;
+      }
+      tbody tr {
+        transition: background 0.15s;
+      }
+      tbody tr:hover {
+        background: rgba(12, 148, 71, 0.04);
+      }
+      .photo-ph {
+        width: 40px;
+        height: 40px;
+        border-radius: 9px;
+        background: rgba(12, 148, 71, 0.1);
+        border: 1px solid var(--border2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+      .photo-ph svg {
+        width: 16px;
+        height: 16px;
+      }
+      .photo-thumb {
+        width: 40px;
+        height: 40px;
+        border-radius: 9px;
+        object-fit: cover;
+        border: 1px solid var(--border2);
+        display: block;
+        flex-shrink: 0;
+        background: rgba(12, 148, 71, 0.1);
+      }
+      .actions-cell {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+
+      /* ── BADGES ── */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 9px;
+        border-radius: 12px;
+        font-size: 10.5px;
+        font-weight: 600;
+        font-family: var(--mono);
+      }
+      .bg-g {
+        background: rgba(12, 148, 71, 0.15);
+        color: var(--g3);
+        border: 1px solid rgba(12, 148, 71, 0.25);
+      }
+      .bg-r {
+        background: rgba(232, 64, 64, 0.12);
+        color: var(--red);
+        border: 1px solid rgba(232, 64, 64, 0.22);
+      }
+      .bg-o {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--orange);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+      }
+      .bg-b {
+        background: rgba(24, 170, 238, 0.1);
+        color: var(--blue);
+        border: 1px solid rgba(24, 170, 238, 0.2);
+      }
+      .bg-m {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--muted);
+        border: 1px solid var(--border);
+      }
+      .bg-t {
+        background: rgba(6, 191, 160, 0.1);
+        color: var(--teal);
+        border: 1px solid rgba(6, 191, 160, 0.22);
+      }
+
+      /* ── FILTERS ROW ── */
+      .filters {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+        flex-wrap: wrap;
+      }
+      .filters select,
+      .filters input {
+        background: rgba(12, 148, 71, 0.06);
+        border: 1px solid var(--border2);
+        border-radius: 8px;
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 12.5px;
+        padding: 7px 12px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .filters select:focus,
+      .filters input:focus {
+        border-color: var(--g1);
+      }
+      .filters select option {
+        background: var(--bg3);
+      }
+
+      /* ── FORM ── */
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .fg-full {
+        grid-column: 1/-1;
+      }
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .form-group label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        font-family: var(--mono);
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
+        background: rgba(12, 148, 71, 0.05);
+        border: 1px solid var(--border2);
+        border-radius: 9px;
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 13px;
+        padding: 9px 13px;
+        outline: none;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+      .form-group input:focus,
+      .form-group select:focus,
+      .form-group textarea:focus {
+        border-color: var(--g1);
+        box-shadow: 0 0 0 3px rgba(12, 148, 71, 0.1);
+      }
+      .form-group select option {
+        background: var(--bg3);
+      }
+      .form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+      .file-drop {
+        border: 2px dashed var(--border2);
+        border-radius: 10px;
+        padding: 24px;
+        text-align: center;
+        cursor: pointer;
+        transition:
+          border-color 0.2s,
+          background 0.2s;
+      }
+      .file-drop:hover {
+        border-color: var(--g1);
+        background: rgba(12, 148, 71, 0.04);
+      }
+      .file-drop p {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 6px;
+        font-family: var(--mono);
+      }
+      .file-drop svg {
+        color: var(--g1);
+        width: 24px;
+        height: 24px;
+      }
+      .preview-img {
+        width: 60px;
+        height: 60px;
+        border-radius: 10px;
+        object-fit: cover;
+        display: none;
+        border: 2px solid var(--border2);
+      }
+
+      /* ── MODAL ── */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+        z-index: 200;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .modal-overlay.open {
+        display: flex;
+        animation: fadeIn 0.2s;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      .modal {
+        background: rgba(3, 14, 8, 0.97);
+        border: 1px solid var(--border2);
+        border-radius: 18px;
+        width: 100%;
+        max-width: 520px;
+        max-height: 88vh;
+        overflow-y: auto;
+        animation: modalUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .modal-lg {
+        max-width: 680px;
+      }
+      @keyframes modalUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px) scale(0.97);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+      .modal::before {
+        content: "";
+        display: block;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--g2), transparent);
+        border-radius: 18px 18px 0 0;
+      }
+      .modal-head {
+        padding: 18px 22px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .modal-head h3 {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .modal-close {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 6px;
+        transition: all 0.2s;
+        display: flex;
+      }
+      .modal-close:hover {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .modal-close svg {
+        width: 16px;
+        height: 16px;
+      }
+      .modal-body {
+        padding: 22px;
+      }
+      .modal-footer {
+        padding: 14px 22px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      /* ── TOAST ── */
+      .toast-wrap {
+        position: fixed;
+        top: 18px;
+        right: 18px;
+        z-index: 300;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .toast {
+        background: rgba(3, 14, 8, 0.97);
+        border: 1px solid var(--border2);
+        border-radius: 11px;
+        padding: 11px 15px;
+        font-size: 12px;
+        min-width: 260px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--mono);
+      }
+      .toast.s {
+        border-color: rgba(12, 148, 71, 0.4);
+        color: var(--g3);
+      }
+      .toast.e {
+        border-color: rgba(232, 64, 64, 0.35);
+        color: var(--red);
+      }
+      .toast.w {
+        border-color: rgba(245, 158, 11, 0.3);
+        color: var(--orange);
+      }
+      @keyframes toastIn {
+        from {
+          opacity: 0;
+          transform: translateX(16px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      /* ── EMPTY ── */
+      .empty {
+        text-align: center;
+        padding: 48px 20px;
+        color: var(--muted);
+      }
+      .empty-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: rgba(12, 148, 71, 0.08);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 14px;
+        color: var(--g1);
+      }
+      .empty-icon svg {
+        width: 22px;
+        height: 22px;
+      }
+      .empty p {
+        font-size: 12px;
+        font-family: var(--mono);
+      }
+
+      /* ── LOADER ── */
+      .loader {
+        display: inline-block;
+        width: 13px;
+        height: 13px;
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        border-top-color: var(--g3);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* ── SEANCE CARD ── */
+      .seance-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 14px 18px;
+        border: 1px solid var(--border);
+        border-radius: 11px;
+        background: rgba(12, 148, 71, 0.04);
+        transition: all 0.2s;
+        margin-bottom: 8px;
+      }
+      .seance-card:hover {
+        border-color: var(--border2);
+        background: rgba(12, 148, 71, 0.08);
+      }
+      .sc-time {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--g2);
+        text-align: center;
+        min-width: 68px;
+        line-height: 1.4;
+      }
+      .sc-info {
+        flex: 1;
+      }
+      .sc-info strong {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .sc-info .meta {
+        font-size: 11.5px;
+        color: var(--muted);
+        margin-top: 2px;
+        font-family: var(--mono);
+      }
+      .sc-info .tags {
+        display: flex;
+        gap: 6px;
+        margin-top: 7px;
+        flex-wrap: wrap;
+      }
+
+      /* ── JUSTIF ITEM ── */
+      .justif-item {
+        display: flex;
+        gap: 14px;
+        padding: 14px 18px;
+        border: 1px solid var(--border);
+        border-radius: 11px;
+        background: rgba(3, 14, 8, 0.5);
+        transition: border-color 0.2s;
+        margin-bottom: 8px;
+      }
+      .justif-item:hover {
+        border-color: var(--border2);
+      }
+      .justif-body {
+        flex: 1;
+      }
+      .justif-body .name {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .justif-body .meta {
+        font-size: 11px;
+        color: var(--muted);
+        font-family: var(--mono);
+        margin-top: 3px;
+      }
+      .justif-body .motif {
+        font-size: 12px;
+        color: var(--text2);
+        margin-top: 6px;
+        padding: 8px 12px;
+        background: rgba(12, 148, 71, 0.06);
+        border-radius: 7px;
+        border-left: 2px solid var(--g5);
+      }
+      .justif-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-end;
+        flex-shrink: 0;
+      }
+
+      /* ── RAPPORT CARD ── */
+      .rapport-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 18px;
+        border: 1px solid var(--border);
+        border-radius: 11px;
+        background: rgba(3, 14, 8, 0.5);
+        transition: all 0.2s;
+        margin-bottom: 8px;
+      }
+      .rapport-card:hover {
+        border-color: var(--border2);
+        transform: translateX(3px);
+      }
+      .rc-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: rgba(12, 148, 71, 0.1);
+        border: 1px solid var(--border2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--g2);
+        flex-shrink: 0;
+      }
+      .rc-icon svg {
+        width: 18px;
+        height: 18px;
+      }
+      .rc-body {
+        flex: 1;
+      }
+      .rc-body .title {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .rc-body .meta {
+        font-size: 11px;
+        color: var(--muted);
+        font-family: var(--mono);
+        margin-top: 2px;
+      }
+      .rc-stats {
+        display: flex;
+        gap: 8px;
+        margin-top: 7px;
+      }
+      .rc-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      /* ── PLANNING GRID ── */
+      .planning-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .planning-table th {
+        background: rgba(12, 148, 71, 0.08);
+        padding: 10px 14px;
+        font-size: 10px;
+        font-family: var(--mono);
+        letter-spacing: 2px;
+        color: var(--muted);
+        text-transform: uppercase;
+        text-align: left;
+        border: 1px solid var(--border);
+      }
+      .planning-table td {
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        font-size: 12.5px;
+        vertical-align: middle;
+      }
+      .planning-table tr:hover td {
+        background: rgba(12, 148, 71, 0.04);
+      }
+
+      /* ── TAUX PROGRESS ── */
+      .taux-bar {
+        height: 6px;
+        background: rgba(12, 148, 71, 0.12);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .taux-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      /* ── SEARCH ── */
+      .search-wrap {
+        position: relative;
+      }
+      .search-wrap svg {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--muted);
+        width: 14px;
+        height: 14px;
+      }
+      .search-wrap input {
+        padding-left: 32px;
+        background: rgba(12, 148, 71, 0.06);
+        border: 1px solid var(--border2);
+        border-radius: 8px;
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 12.5px;
+        padding-right: 12px;
+        padding-top: 7px;
+        padding-bottom: 7px;
+        outline: none;
+        width: 220px;
+        transition: border-color 0.2s;
+      }
+      .search-wrap input:focus {
+        border-color: var(--g1);
+      }
+
+      /* ── GRID LAYOUTS ── */
+      .g2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .g3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 16px;
+      }
+
+      /* ── ARCHIVE SECTION ── */
+      .archive-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .archive-header .archive-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--orange);
+      }
+      .archive-header .archive-icon svg {
+        width: 13px;
+        height: 13px;
+      }
+
+      /* ── FILIERE CARD ── */
+      .filiere-card {
+        padding: 16px 18px;
+        border: 1px solid var(--border);
+        border-radius: 11px;
+        background: rgba(3, 14, 8, 0.5);
+        transition: all 0.2s;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+      }
+      .filiere-card::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: linear-gradient(to bottom, var(--g2), var(--teal));
+        border-radius: 3px 0 0 3px;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      .filiere-card:hover::before {
+        opacity: 1;
+      }
+      .filiere-card:hover {
+        border-color: var(--border2);
+        background: rgba(12, 148, 71, 0.07);
+      }
+      .fc-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .fc-meta {
+        font-size: 11px;
+        color: var(--muted);
+        font-family: var(--mono);
+        margin-top: 3px;
+      }
+      .fc-actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      /* ── EMPLOI UPLOAD ── */
+      .upload-zone {
+        border: 2px dashed var(--border2);
+        border-radius: 12px;
+        padding: 28px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: rgba(12, 148, 71, 0.03);
+      }
+      .upload-zone:hover {
+        border-color: var(--g1);
+        background: rgba(12, 148, 71, 0.07);
+      }
+      .upload-zone h4 {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text2);
+        margin-top: 10px;
+      }
+      .upload-zone p {
+        font-size: 11px;
+        color: var(--muted);
+        font-family: var(--mono);
+        margin-top: 4px;
+      }
+
+      /* ── PRESENCE ITEM ── */
+      .pres-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        border-radius: 9px;
+        border: 1px solid var(--border);
+        background: rgba(3, 14, 8, 0.5);
+        transition: border-color 0.2s;
+        margin-bottom: 6px;
+      }
+      .pres-item:hover {
+        border-color: var(--border2);
+      }
+      .pres-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .pres-time {
+        font-size: 10.5px;
+        color: var(--muted);
+        font-family: var(--mono);
+        margin-top: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="cur-dot" id="curDot"></div>
+    <div class="cur-ring" id="curRing"></div>
+    <div class="grid-overlay"></div>
+    <div class="noise"></div>
+    <div class="toast-wrap" id="toasts"></div>
+
+    <!-- ═══ SIDEBAR ═══ -->
+    <aside class="sidebar">
+      <div class="sb-logo">
+        <div class="logo-wrap">
+          <img
+            src="../static/LOGO.png"
+            alt="FaceAttend"
+            class="logo-img-full"
+            onerror="this.style.display='none';document.getElementById('logo-fallback-a').style.display='block';"
+          />
+          <div id="logo-fallback-a" class="logo-fallback-text" style="display:none">Face<span style="color:var(--g4)">Attend</span></div>
+        </div>
+        <div class="role-pill">
+          <span class="dot"></span><span>Administrateur</span>
+        </div>
+      </div></div>
+
+      <div class="nav-sec">Tableau de bord</div>
+      <div class="nav-item active" onclick="nav('dashboard', this)">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+        Vue d'ensemble
+        <span class="nav-badge" id="nb-seances">0</span>
+      </div>
+
+      <div class="nav-sec">Gestion</div>
+      <div class="nav-item" onclick="nav('profs', this)">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+        Professeurs
+      </div>
+      <div class="nav-item" onclick="nav('etudiants', this)">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+          <path d="M6 12v5c3 3 9 3 12 0v-5" />
+        </svg>
+        Etudiants
+      </div>
+      <div class="nav-item" onclick="nav('filieres', this)">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+          <path
+            d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"
+          />
+        </svg>
+        Filieres &amp; Groupes
+      </div>
+
+      <div class="nav-sec">Suivi</div>
+      <div class="nav-item" onclick="nav('justifications', this)">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+          />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+        </svg>
+        Justifications
+        <span class="nav-badge red" id="nb-justif">0</span>
+      </div>
+      <div class="nav-item" onclick="nav('rapports', this)">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <line x1="18" y1="20" x2="18" y2="10" />
+          <line x1="12" y1="20" x2="12" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="14" />
+        </svg>
+        Rapports
+      </div>
+
+      <div class="sb-spacer"></div>
+      <div class="sb-footer">
+        <div class="admin-card">
+          <div class="admin-av" id="av-initials">A</div>
+          <div class="admin-info">
+            <div class="n" id="av-name">Administrateur</div>
+            <div class="r">admin</div>
+          </div>
+          <button class="btn-logout" onclick="logout()" title="Deconnexion">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══ MAIN ═══ -->
+    <main class="main">
+      <!-- Photo de fond — commence après la topbar -->
+      <div class="bg-img"></div>
+      <div class="bg-scene">
+        <div class="bg-orb o1"></div>
+        <div class="bg-orb o2"></div>
+        <div class="bg-orb o3"></div>
+      </div>
+      <div class="topbar">
+        <div class="tb-left">
+          <div class="breadcrumb">
+            <span class="bc-root">FaceAttend</span>
+            <span class="bc-sep">/</span>
+            <span class="bc-cur" id="bc-cur">Vue d'ensemble</span>
+          </div>
+          <div class="tb-pill">
+            <span class="dot"></span><span id="clock">--:--:--</span>
+          </div>
+        </div>
+        <div class="tb-right">
+          <button class="btn btn-ghost btn-sm" onclick="genererSeances()">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path
+                d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+              />
+            </svg>
+            Generer seances
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="loadPage()">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path
+                d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+              />
+            </svg>
+            Actualiser
+          </button>
+        </div>
+      </div>
+
+      <!-- ══ DASHBOARD ══ -->
+      <div class="page active" id="page-dashboard">
+        <div class="ph">
+          <div>
+            <div class="ph-tag">Administration</div>
+            <div class="ph-title">Vue d'ensemble</div>
+            <div class="ph-sub">Planning du jour et statistiques globales</div>
+          </div>
+          <div class="ph-actions">
+            <button class="btn btn-primary btn-sm" onclick="genererSeances()">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Generer seances du jour
+            </button>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="sc cg">
+            <div class="sc-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                <path d="M6 12v5c3 3 9 3 12 0v-5" />
+              </svg>
+            </div>
+            <div class="sc-n" id="stat-etu">—</div>
+            <div class="sc-label">Etudiants</div>
+          </div>
+          <div class="sc ct">
+            <div class="sc-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </div>
+            <div class="sc-n" id="stat-prof">—</div>
+            <div class="sc-label">Professeurs</div>
+          </div>
+          <div class="sc cl">
+            <div class="sc-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+                <path
+                  d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"
+                />
+              </svg>
+            </div>
+            <div class="sc-n" id="stat-fil">—</div>
+            <div class="sc-label">Filieres</div>
+          </div>
+          <div class="sc cd">
+            <div class="sc-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            </div>
+            <div class="sc-n" id="stat-seances">—</div>
+            <div class="sc-label">Seances aujourd'hui</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="sh">
+            <h3>Planning du jour — toutes les seances</h3>
+            <div class="sh-actions">
+              <span class="badge bg-g" id="date-today"></span>
+            </div>
+          </div>
+          <div class="tw">
+            <table>
+              <thead>
+                <tr>
+                  <th>Matiere</th>
+                  <th>Groupe</th>
+                  <th>Salle</th>
+                  <th>Professeur</th>
+                  <th>Debut</th>
+                  <th>Fin</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody id="planning-body">
+                <tr>
+                  <td
+                    colspan="7"
+                    style="
+                      text-align: center;
+                      color: var(--muted);
+                      padding: 32px;
+                      font-family: var(--mono);
+                    "
+                  >
+                    Chargement...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ PROFESSEURS ══ -->
+      <div class="page" id="page-profs">
+        <div class="ph">
+          <div>
+            <div class="ph-tag">Corps enseignant</div>
+            <div class="ph-title">Professeurs</div>
+            <div class="ph-sub">Profils et reconnaissance faciale ArcFace</div>
+          </div>
+          <div class="ph-actions">
+            <button
+              class="btn btn-primary btn-sm"
+              onclick="openModal('modal-prof')"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Ajouter un professeur
+            </button>
+          </div>
+        </div>
+        <div class="section">
+          <div class="filters">
+            <select id="filter-matiere" onchange="loadProfs()">
+              <option value="">Toutes les matieres</option>
+            </select>
+            <div class="search-wrap">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                id="search-prof"
+                placeholder="Rechercher..."
+                oninput="loadProfs()"
+              />
+            </div>
+          </div>
+          <div class="tw">
+            <table>
+              <thead>
+                <tr>
+                  <th>Photo</th>
+                  <th>Nom complet</th>
+                  <th>Matiere</th>
+                  <th>Embedding</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="profs-body">
+                <tr>
+                  <td
+                    colspan="5"
+                    style="
+                      text-align: center;
+                      color: var(--muted);
+                      padding: 32px;
+                      font-family: var(--mono);
+                    "
+                  >
+                    Chargement...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ETUDIANTS ══ -->
+      <div class="page" id="page-etudiants">
+        <div class="ph">
+          <div>
+            <div class="ph-tag">Population</div>
+            <div class="ph-title">Etudiants</div>
+            <div class="ph-sub">Registre complet et embeddings facials</div>
+          </div>
+          <div class="ph-actions">
+            <select
+              id="filter-filiere-etu"
+              onchange="onFiliereFilterChange()"
+              style="
+                padding: 7px 12px;
+                background: rgba(12, 148, 71, 0.06);
+                border: 1px solid var(--border2);
+                border-radius: 8px;
+                color: var(--text);
+                font-family: var(--sans);
+                font-size: 12.5px;
+                outline: none;
+              "
+            >
+              <option value="">Toutes les filieres</option>
+            </select>
+            <select
+              id="filter-groupe-etu"
+              onchange="loadEtudiants()"
+              style="
+                padding: 7px 12px;
+                background: rgba(12, 148, 71, 0.06);
+                border: 1px solid var(--border2);
+                border-radius: 8px;
+                color: var(--text);
+                font-family: var(--sans);
+                font-size: 12.5px;
+                outline: none;
+              "
+            >
+              <option value="">Tous les groupes</option>
+            </select>
+            <button
+              class="btn btn-primary btn-sm"
+              onclick="openModal('modal-etudiant')"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Ajouter un etudiant
+            </button>
+          </div>
+        </div>
+        <div class="section">
+          <div class="tw">
+            <table>
+              <thead>
+                <tr>
+                  <th>Photo</th>
+                  <th>Nom complet</th>
+                  <th>CNE</th>
+                  <th>Groupe</th>
+                  <th>Filiere</th>
+                  <th>Embedding</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="etu-body">
+                <tr>
+                  <td
+                    colspan="7"
+                    style="
+                      text-align: center;
+                      color: var(--muted);
+                      padding: 32px;
+                      font-family: var(--mono);
+                    "
+                  >
+                    Chargement...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ FILIERES & GROUPES ══ -->
+      <div class="page" id="page-filieres">
+        <div class="ph">
+          <div>
+            <div class="ph-tag">Organisation</div>
+            <div class="ph-title">Filieres &amp; Groupes</div>
+            <div class="ph-sub">Structure pedagogique et emplois du temps</div>
+          </div>
+          <div class="ph-actions">
+            <button
+              class="btn btn-ghost btn-sm"
+              onclick="openModal('modal-groupe')"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Ajouter groupe
+            </button>
+            <button
+              class="btn btn-primary btn-sm"
+              onclick="openModal('modal-filiere')"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Ajouter filiere
+            </button>
+          </div>
+        </div>
+        <div class="g2">
+          <div class="section">
+            <div class="sh"><h3>Filieres</h3></div>
+            <div style="padding: 14px" id="filieres-list">
+              <div
+                style="
+                  color: var(--muted);
+                  font-family: var(--mono);
+                  font-size: 12px;
+                  text-align: center;
+                  padding: 24px;
+                "
+              >
+                Chargement...
+              </div>
+            </div>
+          </div>
+          <div class="section">
+            <div class="sh"><h3>Groupes</h3></div>
+            <div class="tw">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nom</th>
+                    <th>Filiere</th>
+                    <th>Etudiants</th>
+                    <th>Emploi du temps</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="groupes-body">
+                  <tr>
+                    <td
+                      colspan="5"
+                      style="
+                        text-align: center;
+                        color: var(--muted);
+                        padding: 24px;
+                        font-family: var(--mono);
+                      "
+                    >
+                      Chargement...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ JUSTIFICATIONS ══ -->
+      <div class="page" id="page-justifications">
+        <div class="ph">
+          <div>
+            <div class="ph-tag">Suivi</div>
+            <div class="ph-title">Demandes de justification</div>
+            <div class="ph-sub">
+              Traitement des demandes etudiants et professeurs
+            </div>
+          </div>
+          <div class="ph-actions">
+            <div style="display: flex; gap: 6px">
+              <button
+                class="btn btn-ghost btn-sm"
+                id="filter-all"
+                onclick="filterJustif('all')"
+              >
+                Toutes
+              </button>
+              <button
+                class="btn btn-ghost btn-sm"
+                id="filter-etudiant"
+                onclick="filterJustif('etudiant')"
+              >
+                Etudiants
+              </button>
+              <button
+                class="btn btn-ghost btn-sm"
+                id="filter-prof-justif"
+                onclick="filterJustif('prof')"
+              >
+                Professeurs
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="justif-list" style="padding: 0 0 20px"></div>
+      </div>
+
+      <!-- ══ RAPPORTS ══ -->
+      <div class="page" id="page-rapports">
+        <div class="ph">
+          <div>
+            <div class="ph-tag">Analytique</div>
+            <div class="ph-title">Rapports de presence</div>
+            <div class="ph-sub">Historique et archives</div>
+          </div>
+          <div class="ph-actions">
+            <select
+              id="filter-rapport-date"
+              onchange="loadRapports()"
+              style="
+                padding: 7px 12px;
+                background: rgba(12, 148, 71, 0.06);
+                border: 1px solid var(--border2);
+                border-radius: 8px;
+                color: var(--text);
+                font-family: var(--sans);
+                font-size: 12.5px;
+                outline: none;
+              "
+            >
+              <option value="today">Aujourd'hui</option>
+              <option value="week">Cette semaine</option>
+              <option value="month">Ce mois</option>
+              <option value="all">Tout</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="section" style="margin-bottom: 20px">
+          <div class="sh">
+            <h3>Rapports du jour</h3>
+            <div class="sh-actions">
+              <button class="btn btn-warn btn-sm" onclick="archiverRapports()">
+                Archiver (&gt;48h)
+              </button>
+            </div>
+          </div>
+          <div class="tw">
+            <table>
+              <thead>
+                <tr>
+                  <th>Matiere</th>
+                  <th>Groupe</th>
+                  <th>Date</th>
+                  <th>Presents</th>
+                  <th>Absents</th>
+                  <th>Taux</th>
+                  <th>Prof present</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="rapports-body">
+                <tr>
+                  <td
+                    colspan="8"
+                    style="
+                      text-align: center;
+                      color: var(--muted);
+                      padding: 32px;
+                      font-family: var(--mono);
+                    "
+                  >
+                    Aucun rapport
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="archive-header">
+            <div class="archive-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="21 8 21 21 3 21 3 8" />
+                <rect x="1" y="3" width="22" height="5" />
+                <line x1="10" y1="12" x2="14" y2="12" />
+              </svg>
+            </div>
+            <h3 style="font-size: 13px; font-weight: 700; color: var(--text2)">
+              Archives
+            </h3>
+          </div>
+          <div class="filters">
+            <input type="date" id="archive-date" onchange="loadArchives()" />
+            <select id="archive-month" onchange="loadArchives()">
+              <option value="">Filtrer par mois</option>
+              <option value="01">Janvier</option>
+              <option value="02">Fevrier</option>
+              <option value="03">Mars</option>
+              <option value="04">Avril</option>
+              <option value="05">Mai</option>
+              <option value="06">Juin</option>
+              <option value="07">Juillet</option>
+              <option value="08">Aout</option>
+              <option value="09">Septembre</option>
+              <option value="10">Octobre</option>
+              <option value="11">Novembre</option>
+              <option value="12">Decembre</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" onclick="loadArchives()">
+              Rechercher
+            </button>
+          </div>
+          <div class="tw">
+            <table>
+              <thead>
+                <tr>
+                  <th>Matiere</th>
+                  <th>Groupe</th>
+                  <th>Date</th>
+                  <th>Presents</th>
+                  <th>Absents</th>
+                  <th>Taux</th>
+                  <th>Archive le</th>
+                </tr>
+              </thead>
+              <tbody id="archives-body">
+                <tr>
+                  <td
+                    colspan="7"
+                    style="
+                      text-align: center;
+                      color: var(--muted);
+                      padding: 32px;
+                      font-family: var(--mono);
+                    "
+                  >
+                    Selectionnez une periode
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ══════════ MODALS ══════════ -->
+
+    <!-- MODAL PROF -->
+    <div class="modal-overlay" id="modal-prof">
+      <div class="modal">
+        <div class="modal-head">
+          <h3 id="modal-prof-title">Ajouter un professeur</h3>
+          <button class="modal-close" onclick="closeModal('modal-prof')">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="prof-edit-id" />
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Nom</label
+              ><input type="text" id="prof-nom" placeholder="Nom de famille" />
+            </div>
+            <div class="form-group">
+              <label>Prenom</label
+              ><input type="text" id="prof-prenom" placeholder="Prenom" />
+            </div>
+            <div class="form-group fg-full">
+              <label>Matiere</label
+              ><input
+                type="text"
+                id="prof-matiere"
+                placeholder="ex: Mathematiques, Informatique..."
+              />
+            </div>
+            <div class="form-group fg-full">
+              <label>Photo (embedding ArcFace)</label>
+              <div
+                class="file-drop"
+                onclick="document.getElementById('prof-photo').click()"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+                <p>Cliquez pour selectionner une photo</p>
+              </div>
+              <input
+                type="file"
+                id="prof-photo"
+                accept="image/*"
+                style="display: none"
+                onchange="previewImg(this, 'prof-preview')"
+              />
+              <img
+                id="prof-preview"
+                class="preview-img"
+                style="margin-top: 8px"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-ghost btn-sm"
+            onclick="closeModal('modal-prof')"
+          >
+            Annuler
+          </button>
+          <button
+            class="btn btn-primary btn-sm"
+            id="btn-save-prof"
+            onclick="saveProf()"
+          >
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL ETUDIANT -->
+    <div class="modal-overlay" id="modal-etudiant">
+      <div class="modal">
+        <div class="modal-head">
+          <h3 id="modal-etu-title">Ajouter un etudiant</h3>
+          <button class="modal-close" onclick="closeModal('modal-etudiant')">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="etu-edit-id" />
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Nom</label
+              ><input type="text" id="etu-nom" placeholder="Nom de famille" />
+            </div>
+            <div class="form-group">
+              <label>Prenom</label
+              ><input type="text" id="etu-prenom" placeholder="Prenom" />
+            </div>
+            <div class="form-group">
+              <label>CNE</label
+              ><input
+                type="text"
+                id="etu-cne"
+                placeholder="Code national etudiant"
+              />
+            </div>
+            <div class="form-group">
+              <label>Filiere</label
+              ><select id="etu-filiere" onchange="onEtuFiliereChange()">
+                <option value="">Selectionnez une filiere...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Groupe</label
+              ><select id="etu-groupe">
+                <option value="">Selectionnez d'abord une filiere...</option>
+              </select>
+            </div>
+            <div class="form-group fg-full">
+              <label>Photo (embedding ArcFace)</label>
+              <div
+                class="file-drop"
+                onclick="document.getElementById('etu-photo').click()"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+                <p>Cliquez pour selectionner une photo</p>
+              </div>
+              <input
+                type="file"
+                id="etu-photo"
+                accept="image/*"
+                style="display: none"
+                onchange="previewImg(this, 'etu-preview')"
+              />
+              <img
+                id="etu-preview"
+                class="preview-img"
+                style="margin-top: 8px"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-ghost btn-sm"
+            onclick="closeModal('modal-etudiant')"
+          >
+            Annuler
+          </button>
+          <button
+            class="btn btn-primary btn-sm"
+            id="btn-save-etu"
+            onclick="saveEtudiant()"
+          >
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL FILIERE -->
+    <div class="modal-overlay" id="modal-filiere">
+      <div class="modal">
+        <div class="modal-head">
+          <h3 id="modal-filiere-title">Ajouter une filiere</h3>
+          <button class="modal-close" onclick="closeModal('modal-filiere')">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="filiere-edit-id" />
+          <div class="form-grid">
+            <div class="form-group fg-full">
+              <label>Nom de la filiere</label
+              ><input
+                type="text"
+                id="filiere-nom"
+                placeholder="ex: Genie Informatique, IA..."
+              />
+            </div>
+            <div class="form-group fg-full">
+              <label>Description</label
+              ><textarea
+                id="filiere-desc"
+                placeholder="Description (optionnel)"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-ghost btn-sm"
+            onclick="closeModal('modal-filiere')"
+          >
+            Annuler
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="saveFiliere()">
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL GROUPE -->
+    <div class="modal-overlay" id="modal-groupe">
+      <div class="modal">
+        <div class="modal-head">
+          <h3 id="modal-groupe-title">Ajouter un groupe</h3>
+          <button class="modal-close" onclick="closeModal('modal-groupe')">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="groupe-edit-id" />
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Nom du groupe</label
+              ><input
+                type="text"
+                id="groupe-nom"
+                placeholder="ex: G1, G2A..."
+              />
+            </div>
+            <div class="form-group">
+              <label>Filiere</label
+              ><select id="groupe-filiere">
+                <option value="">Selectionnez...</option>
+              </select>
+            </div>
+            <div class="form-group fg-full">
+              <label>Emploi du temps (PDF)</label>
+              <div
+                class="upload-zone"
+                onclick="document.getElementById('groupe-emploi').click()"
+              >
+                <svg
+                  width="28"
+                  height="28"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--g1)"
+                  stroke-width="1.5"
+                >
+                  <path
+                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                  />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+                <h4>Glissez ou cliquez pour uploader le PDF</h4>
+                <p id="emploi-filename">Aucun fichier selectionne</p>
+              </div>
+              <input
+                type="file"
+                id="groupe-emploi"
+                accept=".pdf"
+                style="display: none"
+                onchange="
+                  document.getElementById('emploi-filename').textContent =
+                    this.files[0]?.name || 'Aucun fichier'
+                "
+              />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-ghost btn-sm"
+            onclick="closeModal('modal-groupe')"
+          >
+            Annuler
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="saveGroupe()">
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL RAPPORT DETAIL -->
+    <div class="modal-overlay" id="modal-rapport">
+      <div class="modal modal-lg">
+        <div class="modal-head">
+          <h3 id="modal-rapport-title">Detail du rapport</h3>
+          <button class="modal-close" onclick="closeModal('modal-rapport')">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body" id="modal-rapport-body"></div>
+      </div>
+    </div>
+
+    <script>
+      const API = "";
+      let allJustifs = [];
+      let currentFilter = "all";
+
+      // ── CURSOR ──
+      const dot = document.getElementById("curDot"),
+        ring = document.getElementById("curRing");
+      let mx = 0,
+        my = 0,
+        rx = 0,
+        ry = 0;
+      document.addEventListener("mousemove", (e) => {
+        mx = e.clientX;
+        my = e.clientY;
+        dot.style.left = mx + "px";
+        dot.style.top = my + "px";
+      });
+      (function animRing() {
+        rx += (mx - rx) * 0.12;
+        ry += (my - ry) * 0.12;
+        ring.style.left = rx + "px";
+        ring.style.top = ry + "px";
+        requestAnimationFrame(animRing);
+      })();
+      document
+        .querySelectorAll("button,a,.nav-item,.sc,.filiere-card")
+        .forEach((el) => {
+          el.addEventListener("mouseenter", () => ring.classList.add("hov"));
+          el.addEventListener("mouseleave", () => ring.classList.remove("hov"));
+        });
+
+      // ── CLOCK ──
+      function updateClock() {
+        const n = new Date();
+        document.getElementById("clock").textContent =
+          n.toLocaleTimeString("fr-FR");
+        document.getElementById("date-today").textContent =
+          n.toLocaleDateString("fr-FR", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+          });
+      }
+      setInterval(updateClock, 1000);
+      updateClock();
+
+      // ── API ──
+      async function api(method, url, body) {
+        const opts = { method, headers: {} };
+        if (body && !(body instanceof FormData)) {
+          opts.headers["Content-Type"] = "application/json";
+          opts.body = JSON.stringify(body);
+        } else if (body) {
+          opts.body = body;
+        }
+        const r = await fetch(API + url, opts);
+        const text = await r.text();
+        try {
+          return JSON.parse(text);
+        } catch {
+          console.warn(`API ${method} ${url} → ${r.status}: non-JSON response`, text.slice(0, 120));
+          return { error: `HTTP ${r.status} — route introuvable ou erreur serveur` };
+        }
+      }
+
+      // ── TOAST ──
+      function toast(msg, type = "s") {
+        const w = document.getElementById("toasts");
+        const t = document.createElement("div");
+        t.className = `toast ${type}`;
+        const icon =
+          type === "s"
+            ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+            : type === "e"
+              ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+              : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        t.innerHTML = icon + msg;
+        w.appendChild(t);
+        setTimeout(() => (t.style.opacity = "0"), 3200);
+        setTimeout(() => t.remove(), 3500);
+      }
+
+      // ── MODALS ──
+      function openModal(id) {
+        document.getElementById(id).style.display = "flex";
+        setTimeout(() => document.getElementById(id).classList.add("open"), 10);
+      }
+      function closeModal(id) {
+        const m = document.getElementById(id);
+        m.classList.remove("open");
+        setTimeout(() => (m.style.display = "none"), 200);
+      }
+      document.querySelectorAll(".modal-overlay").forEach((o) =>
+        o.addEventListener("click", (e) => {
+          if (e.target === o)
+            (o.classList.remove("open"),
+              setTimeout(() => (o.style.display = "none"), 200));
+        }),
+      );
+
+      // ── NAVIGATION ──
+      function nav(page, el) {
+        document
+          .querySelectorAll(".page")
+          .forEach((p) => p.classList.remove("active"));
+        document
+          .querySelectorAll(".nav-item")
+          .forEach((i) => i.classList.remove("active"));
+        document.getElementById("page-" + page).classList.add("active");
+        el.classList.add("active");
+        const labels = {
+          dashboard: "Vue d'ensemble",
+          profs: "Professeurs",
+          etudiants: "Etudiants",
+          filieres: "Filieres & Groupes",
+          justifications: "Justifications",
+          rapports: "Rapports",
+        };
+        document.getElementById("bc-cur").textContent = labels[page] || page;
+        loadPage(page);
+      }
+
+      function loadPage(page) {
+        if (!page) {
+          const ap = document.querySelector(".page.active");
+          page = ap ? ap.id.replace("page-", "") : "dashboard";
+        }
+        if (page === "dashboard") loadDashboard();
+        else if (page === "profs") loadProfs();
+        else if (page === "etudiants") {
+          loadGroupesSelect().then(() => loadEtudiants());
+        } else if (page === "filieres") loadFilieres();
+        else if (page === "justifications") loadJustifications();
+        else if (page === "rapports") loadRapports();
+      }
+
+      // ── PREVIEW IMG ──
+      function previewImg(input, previewId) {
+        const f = input.files[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = document.getElementById(previewId);
+          img.src = e.target.result;
+          img.style.display = "block";
+        };
+        reader.readAsDataURL(f);
+      }
+      // ── PHOTO CELL HELPER ──
+      function photoCell(item, type) {
+        // Try photo_url field first, then build from id
+        const url = item.photo_url
+          || (item.photo ? item.photo : null)
+          || (item.id ? `/static/photos/${type}_${item.id}.jpg` : null);
+        if (url) {
+          return `<img src="${url}" alt="${item.nom||''}" class="photo-thumb"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="photo-ph" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>`;
+        }
+        return `<div class="photo-ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>`;
+      }
+
+
+
+      // ══════════ DASHBOARD ══════════
+      async function loadDashboard() {
+        try {
+          // Fetch all data in parallel — no dedicated /admin/stats route needed
+          const [etuData, profData, filData, seancesData, justData] = await Promise.allSettled([
+            api("GET", "/admin/etudiants"),
+            api("GET", "/admin/professeurs"),
+            api("GET", "/admin/filieres"),
+            api("GET", "/seances"),
+            api("GET", "/admin/justifications"),
+          ]);
+
+          // Stats from real data
+          const nbEtu  = etuData.status  === "fulfilled" ? (etuData.value.etudiants  || []).length : 0;
+          const nbProf = profData.status === "fulfilled" ? (profData.value.professeurs || []).length : 0;
+          const nbFil  = filData.status  === "fulfilled" ? (filData.value.filieres    || []).length : 0;
+
+          animCount("stat-etu",  nbEtu);
+          animCount("stat-prof", nbProf);
+          animCount("stat-fil",  nbFil);
+
+          // Today séances
+          const today = new Date().toISOString().split("T")[0];
+          const allSeances = seancesData.status === "fulfilled"
+            ? (seancesData.value.seances || []) : [];
+          const todaySeances = allSeances.filter(s => s.date === today);
+          animCount("stat-seances", todaySeances.length);
+          document.getElementById("nb-seances").textContent = todaySeances.length;
+          renderPlanning(todaySeances);
+
+          // Pending justifs badge
+          const allJustif = justData.status === "fulfilled"
+            ? (justData.value.justifications || []) : [];
+          const pending = allJustif.filter(j => j.statut === "en_attente");
+          document.getElementById("nb-justif").textContent = pending.length;
+
+        } catch (e) {
+          console.error("loadDashboard error:", e);
+          toast("Erreur chargement dashboard", "e");
+        }
+      }
+
+      function animCount(id, target) {
+        const el = document.getElementById(id);
+        let n = 0;
+        const step = Math.max(1, Math.floor(target / 40));
+        const t = setInterval(() => {
+          n = Math.min(n + step, target);
+          el.textContent = n;
+          if (n >= target) clearInterval(t);
+        }, 30);
+      }
+
+      function renderPlanning(seances) {
+        const b = document.getElementById("planning-body");
+        if (!seances.length) {
+          b.innerHTML =
+            '<tr><td colspan="7"><div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><p>Aucune seance planifiee aujourd\'hui</p></div></td></tr>';
+          return;
+        }
+        const statusColor = {
+          en_cours: "bg-o",
+          termine: "bg-g",
+          en_attente: "bg-m",
+          planifie: "bg-b",
+        };
+        b.innerHTML = seances
+          .map(
+            (s) => `<tr>
+    <td><strong>${s.matiere || "—"}</strong></td>
+    <td>${s.groupe_nom || "—"}</td>
+    <td><span style="font-family:var(--mono);font-size:12px;color:var(--muted)">${s.salle_nom || "—"}</span></td>
+    <td>${s.prof_nom || "—"}</td>
+    <td style="font-family:var(--mono);color:var(--g2)">${s.heure_debut || "—"}</td>
+    <td style="font-family:var(--mono);color:var(--muted)">${s.heure_fin || "—"}</td>
+    <td><span class="badge ${statusColor[s.statut] || "bg-m"}">${s.statut || "en_attente"}</span></td>
+  </tr>`,
+          )
+          .join("");
+      }
+
+      async function genererSeances() {
+        const btn = event?.currentTarget;
+        const origHTML = btn ? btn.innerHTML : "";
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loader"></span> Génération...'; }
+        toast("Génération des séances...", "w");
+        try {
+          const r = await api("POST", "/admin/generer-seances");
+          if (r.message || r.seances_creees !== undefined) {
+            toast(r.message || `Séances générées avec succès`, "s");
+            loadDashboard();
+          } else if (r.error) {
+            toast(r.error, "e");
+          } else {
+            toast("Séances du jour générées", "s");
+            loadDashboard();
+          }
+        } catch (err) {
+          console.error("genererSeances:", err);
+          toast("Erreur réseau", "e");
+        } finally {
+          if (btn) { btn.disabled = false; btn.innerHTML = origHTML; }
+        }
+      }
+
+      // ══════════ PROFESSEURS ══════════
+      async function loadProfs() {
+        try {
+          const data = await api("GET", "/admin/professeurs");
+          const search =
+            document.getElementById("search-prof")?.value.toLowerCase() || "";
+          const mat = document.getElementById("filter-matiere")?.value || "";
+          let list = data.professeurs || [];
+          // Remplir select matieres
+          const matieres = [
+            ...new Set(list.map((p) => p.matiere).filter(Boolean)),
+          ];
+          const sel = document.getElementById("filter-matiere");
+          const cur = sel.value;
+          sel.innerHTML =
+            '<option value="">Toutes les matieres</option>' +
+            matieres
+              .map(
+                (m) =>
+                  `<option value="${m}"${m === cur ? " selected" : ""}>${m}</option>`,
+              )
+              .join("");
+          if (mat) list = list.filter((p) => p.matiere === mat);
+          if (search)
+            list = list.filter((p) =>
+              `${p.nom} ${p.prenom}`.toLowerCase().includes(search),
+            );
+          const b = document.getElementById("profs-body");
+          b.innerHTML = list.length
+            ? list
+                .map(
+                  (p) => `<tr>
+      <td>${photoCell(p, 'prof')}</td>
+      <td><strong>${p.nom} ${p.prenom}</strong></td>
+      <td><span class="badge bg-t">${p.matiere || "—"}</span></td>
+      <td>${p.a_embedding ? '<span class="badge bg-g">Enregistre</span>' : '<span class="badge bg-o">Manquant</span>'}</td>
+      <td><div class="actions-cell">
+        <button class="btn btn-ghost btn-xs" onclick="editProf('${p.id}','${p.nom}','${p.prenom}','${p.matiere}')">Modifier</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteProf('${p.id}')">Supprimer</button>
+      </div></td>
+    </tr>`,
+                )
+                .join("")
+            : '<tr><td colspan="5"><div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><p>Aucun professeur trouve</p></div></td></tr>';
+        } catch {
+          toast("Erreur chargement professeurs", "e");
+        }
+      }
+
+      function editProf(id, nom, prenom, matiere) {
+        document.getElementById("prof-edit-id").value = id;
+        document.getElementById("prof-nom").value = nom;
+        document.getElementById("prof-prenom").value = prenom;
+        document.getElementById("prof-matiere").value = matiere;
+        document.getElementById("modal-prof-title").textContent =
+          "Modifier le professeur";
+        openModal("modal-prof");
+      }
+
+      async function saveProf() {
+        const id = document.getElementById("prof-edit-id").value;
+        const nom = document.getElementById("prof-nom").value.trim();
+        const prenom = document.getElementById("prof-prenom").value.trim();
+        const matiere = document.getElementById("prof-matiere").value.trim();
+        const photo = document.getElementById("prof-photo").files[0];
+        if (!nom || !prenom || !matiere) {
+          toast("Tous les champs sont requis", "e");
+          return;
+        }
+        const btn = document.getElementById("btn-save-prof");
+        btn.innerHTML = '<span class="loader"></span> Calcul embedding...';
+        btn.disabled = true;
+        try {
+          const fd = new FormData();
+          fd.append("nom", nom);
+          fd.append("prenom", prenom);
+          fd.append("matiere", matiere);
+          if (photo) fd.append("photo", photo);
+          const url = id ? `/admin/professeurs/${id}` : "/admin/professeurs";
+          const r = await fetch(API + url, {
+            method: id ? "PUT" : "POST",
+            body: fd,
+          });
+          const data = await r.json();
+          if (data.message) {
+            toast(
+              photo
+                ? "Professeur enregistre avec embedding"
+                : "Professeur enregistre",
+            );
+            closeModal("modal-prof");
+            loadProfs();
+            resetProfForm();
+          } else toast(data.error || "Erreur", "e");
+        } finally {
+          btn.innerHTML = "Enregistrer";
+          btn.disabled = false;
+        }
+      }
+
+      async function deleteProf(id) {
+        if (!confirm("Supprimer ce professeur ?")) return;
+        const r = await api("DELETE", "/admin/professeurs/" + id);
+        if (r.message) {
+          toast("Professeur supprime");
+          loadProfs();
+        } else toast(r.error || "Erreur", "e");
+      }
+
+      function resetProfForm() {
+        document.getElementById("prof-edit-id").value = "";
+        document.getElementById("prof-nom").value = "";
+        document.getElementById("prof-prenom").value = "";
+        document.getElementById("prof-matiere").value = "";
+        document.getElementById("prof-photo").value = "";
+        document.getElementById("prof-preview").style.display = "none";
+        document.getElementById("modal-prof-title").textContent =
+          "Ajouter un professeur";
+      }
+
+      // ══════════ ETUDIANTS ══════════
+
+      // Cache global pour filieres et groupes (evite des appels redondants)
+      let _allFilieres = [];
+      let _allGroupes  = [];
+
+      async function loadFilieresGroupesCache() {
+        const [fd, gd] = await Promise.all([
+          api("GET", "/admin/filieres"),
+          api("GET", "/admin/groupes"),
+        ]);
+        _allFilieres = fd.filieres || [];
+        _allGroupes  = gd.groupes  || [];
+      }
+
+      // ── Filtre page Etudiants : filière → groupe en cascade ──
+      async function loadGroupesSelect() {
+        await loadFilieresGroupesCache();
+
+        // --- Filtre page : select filiere ---
+        const selFil = document.getElementById("filter-filiere-etu");
+        const curFil = selFil.value;
+        selFil.innerHTML =
+          '<option value="">Toutes les filieres</option>' +
+          _allFilieres.map(f =>
+            `<option value="${f.id}"${f.id == curFil ? " selected" : ""}>${f.nom}</option>`
+          ).join("");
+
+        // --- Filtre page : select groupe (filtré si filiere choisie) ---
+        _refreshPageGroupeSelect();
+
+        // --- Modal étudiant : select filiere ---
+        const selFil2 = document.getElementById("etu-filiere");
+        const curFil2 = selFil2.value;
+        selFil2.innerHTML =
+          '<option value="">Selectionnez une filiere...</option>' +
+          _allFilieres.map(f =>
+            `<option value="${f.id}"${f.id == curFil2 ? " selected" : ""}>${f.nom}</option>`
+          ).join("");
+
+        // --- Modal étudiant : select groupe (vide jusqu'au choix filiere) ---
+        _refreshModalGroupeSelect();
+      }
+
+      function _refreshPageGroupeSelect() {
+        const fid = document.getElementById("filter-filiere-etu")?.value || "";
+        const sel = document.getElementById("filter-groupe-etu");
+        const cur = sel.value;
+        const groupesFiltres = fid
+          ? _allGroupes.filter(g => g.filiere_id == fid)
+          : _allGroupes;
+        sel.innerHTML =
+          '<option value="">Tous les groupes</option>' +
+          groupesFiltres.map(g =>
+            `<option value="${g.id}"${g.id == cur ? " selected" : ""}>${g.nom}</option>`
+          ).join("");
+        // Si le groupe sélectionné n'est plus dans la liste, on reset
+        if (cur && !groupesFiltres.find(g => g.id == cur)) sel.value = "";
+      }
+
+      function _refreshModalGroupeSelect() {
+        const fid = document.getElementById("etu-filiere")?.value || "";
+        const sel = document.getElementById("etu-groupe");
+        const cur = sel.value;
+        if (!fid) {
+          sel.innerHTML = '<option value="">Selectionnez d\'abord une filiere...</option>';
+          return;
+        }
+        const groupesFiltres = _allGroupes.filter(g => g.filiere_id == fid);
+        sel.innerHTML =
+          '<option value="">Selectionnez un groupe...</option>' +
+          groupesFiltres.map(g =>
+            `<option value="${g.id}"${g.id == cur ? " selected" : ""}>${g.nom}</option>`
+          ).join("");
+      }
+
+      // Appelé quand le filtre Filière de la PAGE change
+      function onFiliereFilterChange() {
+        _refreshPageGroupeSelect();
+        loadEtudiants();
+      }
+
+      // Appelé quand la filière du MODAL change
+      function onEtuFiliereChange() {
+        _refreshModalGroupeSelect();
+      }
+
+      async function loadEtudiants() {
+        try {
+          const gid = document.getElementById("filter-groupe-etu")?.value || "";
+          const fid = document.getElementById("filter-filiere-etu")?.value || "";
+          let url = "/admin/etudiants";
+          if (gid)      url += `?groupe_id=${gid}`;
+          else if (fid) url += `?filiere_id=${fid}`;
+          const data = await api("GET", url);
+          const list = data.etudiants || [];
+          const b = document.getElementById("etu-body");
+          b.innerHTML = list.length
+            ? list
+                .map(
+                  (e) => `<tr>
+      <td>${photoCell(e, 'etudiant')}</td>
+      <td><strong>${e.nom} ${e.prenom}</strong></td>
+      <td style="font-family:var(--mono);color:var(--muted)">${e.cne || "—"}</td>
+      <td>${e.groupe_nom || "—"}</td>
+      <td><span class="badge bg-t">${e.filiere_nom || "—"}</span></td>
+      <td>${e.a_embedding ? '<span class="badge bg-g">Enregistre</span>' : '<span class="badge bg-o">Manquant</span>'}</td>
+      <td><div class="actions-cell">
+        <button class="btn btn-ghost btn-xs" onclick="editEtudiant('${e.id}','${e.nom}','${e.prenom}','${e.cne || ""}','${e.groupe_id}','${e.filiere_id || ""}')">Modifier</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteEtudiant('${e.id}')">Supprimer</button>
+      </div></td>
+    </tr>`,
+                )
+                .join("")
+            : '<tr><td colspan="7"><div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/></svg></div><p>Aucun etudiant trouve</p></div></td></tr>';
+        } catch {
+          toast("Erreur chargement etudiants", "e");
+        }
+      }
+
+      async function editEtudiant(id, nom, prenom, cne, groupeId, filiereId) {
+        document.getElementById("etu-edit-id").value = id;
+        document.getElementById("etu-nom").value = nom;
+        document.getElementById("etu-prenom").value = prenom;
+        document.getElementById("etu-cne").value = cne;
+        // Charger le cache si besoin
+        await loadGroupesSelect();
+        // Sélectionner la filière d'abord
+        document.getElementById("etu-filiere").value = filiereId || "";
+        // Rafraîchir les groupes selon la filière
+        _refreshModalGroupeSelect();
+        // Sélectionner le groupe
+        document.getElementById("etu-groupe").value = groupeId;
+        document.getElementById("modal-etu-title").textContent =
+          "Modifier l'etudiant";
+        openModal("modal-etudiant");
+      }
+
+      async function saveEtudiant() {
+        const id = document.getElementById("etu-edit-id").value;
+        const nom = document.getElementById("etu-nom").value.trim();
+        const prenom = document.getElementById("etu-prenom").value.trim();
+        const cne = document.getElementById("etu-cne").value.trim();
+        const gid = document.getElementById("etu-groupe").value;
+        const photo = document.getElementById("etu-photo").files[0];
+        if (!nom || !prenom || !gid) {
+          toast("Nom, prenom et groupe requis", "e");
+          return;
+        }
+        const btn = document.getElementById("btn-save-etu");
+        btn.innerHTML = '<span class="loader"></span> Calcul embedding...';
+        btn.disabled = true;
+        try {
+          const fd = new FormData();
+          fd.append("nom", nom);
+          fd.append("prenom", prenom);
+          fd.append("cne", cne);
+          fd.append("groupe_id", gid);
+          if (photo) fd.append("photo", photo);
+          const url = id ? `/admin/etudiants/${id}` : "/admin/etudiants";
+          const r = await fetch(API + url, {
+            method: id ? "PUT" : "POST",
+            body: fd,
+          });
+          const data = await r.json();
+          if (data.message) {
+            toast(
+              photo
+                ? "Etudiant enregistre avec embedding"
+                : "Etudiant enregistre",
+            );
+            closeModal("modal-etudiant");
+            loadEtudiants();
+          } else toast(data.error || "Erreur", "e");
+        } finally {
+          btn.innerHTML = "Enregistrer";
+          btn.disabled = false;
+        }
+      }
+
+      async function deleteEtudiant(id) {
+        if (!confirm("Supprimer cet etudiant ?")) return;
+        const r = await api("DELETE", "/admin/etudiants/" + id);
+        if (r.message) {
+          toast("Etudiant supprime");
+          loadEtudiants();
+        } else toast(r.error || "Erreur", "e");
+      }
+
+      // ══════════ FILIERES ══════════
+      async function loadFilieres() {
+        try {
+          const [fd, gd] = await Promise.all([
+            api("GET", "/admin/filieres"),
+            api("GET", "/admin/groupes"),
+          ]);
+          const filieres = fd.filieres || [];
+          const groupes = gd.groupes || [];
+          // Render filieres
+          const flist = document.getElementById("filieres-list");
+          flist.innerHTML = filieres.length
+            ? filieres
+                .map((f) => {
+                  const nb = groupes.filter(
+                    (g) => g.filiere_id === f.id,
+                  ).length;
+                  return `<div class="filiere-card">
+        <div class="fc-name">${f.nom}</div>
+        <div class="fc-meta">${f.description || "Aucune description"} &bull; ${nb} groupe(s)</div>
+        <div class="fc-actions">
+          <button class="btn btn-ghost btn-xs" onclick="editFiliere('${f.id}','${f.nom}','${f.description || ""}')">Modifier</button>
+          <button class="btn btn-danger btn-xs" onclick="deleteFiliere('${f.id}')">Supprimer</button>
+        </div>
+      </div>`;
+                })
+                .join("")
+            : '<div style="color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:32px;">Aucune filiere</div>';
+          // Render groupes
+          const gb = document.getElementById("groupes-body");
+          gb.innerHTML = groupes.length
+            ? groupes
+                .map(
+                  (g) => `<tr>
+      <td><strong>${g.nom}</strong></td>
+      <td><span class="badge bg-t">${g.filiere_nom || "—"}</span></td>
+      <td style="font-family:var(--mono)">${g.nb_etudiants || 0}</td>
+      <td>${g.a_emploi ? '<span class="badge bg-g">Disponible</span>' : '<span class="badge bg-m">Aucun</span>'}</td>
+      <td><div class="actions-cell">
+        <button class="btn btn-teal btn-xs" onclick="uploadEmploi('${g.id}','${g.nom}')">Emploi du temps</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteGroupe('${g.id}')">Supprimer</button>
+      </div></td>
+    </tr>`,
+                )
+                .join("")
+            : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;font-family:var(--mono)">Aucun groupe</td></tr>';
+          // Remplir select filiere dans modal groupe
+          document.getElementById("groupe-filiere").innerHTML =
+            '<option value="">Selectionnez...</option>' +
+            filieres
+              .map((f) => `<option value="${f.id}">${f.nom}</option>`)
+              .join("");
+        } catch {
+          toast("Erreur chargement filieres", "e");
+        }
+      }
+
+      function editFiliere(id, nom, desc) {
+        document.getElementById("filiere-edit-id").value = id;
+        document.getElementById("filiere-nom").value = nom;
+        document.getElementById("filiere-desc").value = desc;
+        document.getElementById("modal-filiere-title").textContent =
+          "Modifier la filiere";
+        openModal("modal-filiere");
+      }
+
+      async function saveFiliere() {
+        const id = document.getElementById("filiere-edit-id").value;
+        const nom = document.getElementById("filiere-nom").value.trim();
+        const desc = document.getElementById("filiere-desc").value.trim();
+        if (!nom) {
+          toast("Nom requis", "e");
+          return;
+        }
+        const url = id ? `/admin/filieres/${id}` : "/admin/filieres";
+        const r = await api(id ? "PUT" : "POST", url, {
+          nom,
+          description: desc,
+        });
+        if (r.message) {
+          toast("Filiere enregistree");
+          closeModal("modal-filiere");
+          loadFilieres();
+        } else toast(r.error || "Erreur", "e");
+      }
+
+      async function deleteFiliere(id) {
+        if (!confirm("Supprimer cette filiere ?")) return;
+        const r = await api("DELETE", "/admin/filieres/" + id);
+        if (r.message) {
+          toast("Filiere supprimee");
+          loadFilieres();
+        } else toast(r.error || "Erreur", "e");
+      }
+
+      async function saveGroupe() {
+        const id = document.getElementById("groupe-edit-id").value;
+        const nom = document.getElementById("groupe-nom").value.trim();
+        const fid = document.getElementById("groupe-filiere").value;
+        const pdf = document.getElementById("groupe-emploi").files[0];
+        if (!nom || !fid) {
+          toast("Nom et filiere requis", "e");
+          return;
+        }
+        const fd = new FormData();
+        fd.append("nom", nom);
+        fd.append("filiere_id", fid);
+        if (pdf) fd.append("emploi_du_temps", pdf);
+        const url = id ? `/admin/groupes/${id}` : "/admin/groupes";
+        const r = await fetch(API + url, {
+          method: id ? "PUT" : "POST",
+          body: fd,
+        });
+        const data = await r.json();
+        if (data.message) {
+          toast("Groupe enregistre");
+          closeModal("modal-groupe");
+          loadFilieres();
+        } else toast(data.error || "Erreur", "e");
+      }
+
+      async function deleteGroupe(id) {
+        if (!confirm("Supprimer ce groupe ?")) return;
+        const r = await api("DELETE", "/admin/groupes/" + id);
+        if (r.message) {
+          toast("Groupe supprime");
+          loadFilieres();
+        } else toast(r.error || "Erreur", "e");
+      }
+
+      function uploadEmploi(groupeId, nom) {
+        document.getElementById("groupe-edit-id").value = groupeId;
+        document.getElementById("groupe-nom").value = nom;
+        document.getElementById("modal-groupe-title").textContent =
+          "Emploi du temps — " + nom;
+        openModal("modal-groupe");
+      }
+
+      // ══════════ JUSTIFICATIONS ══════════
+      async function loadJustifications() {
+        try {
+          const data = await api("GET", "/admin/justifications");
+          allJustifs = data.justifications || [];
+          renderJustifs();
+          document.getElementById("nb-justif").textContent = allJustifs.filter(
+            (j) => j.statut === "en_attente",
+          ).length;
+        } catch {
+          toast("Erreur chargement justifications", "e");
+        }
+      }
+
+      function filterJustif(f) {
+        currentFilter = f;
+        renderJustifs();
+      }
+
+      function renderJustifs() {
+        let list = allJustifs;
+        if (currentFilter !== "all")
+          list = list.filter((j) => j.type === currentFilter);
+        const cont = document.getElementById("justif-list");
+        if (!list.length) {
+          cont.innerHTML =
+            '<div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div><p>Aucune demande de justification</p></div>';
+          return;
+        }
+        cont.innerHTML = list
+          .map(
+            (j) => `
+    <div class="justif-item">
+      <div style="flex-shrink:0;margin-top:3px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${j.statut === "en_attente" ? "var(--orange)" : j.statut === "accepte" ? "var(--g3)" : "var(--red)"}"></div>
+      </div>
+      <div class="justif-body">
+        <div class="name">${j.nom} ${j.prenom} <span class="badge ${j.type === "etudiant" ? "bg-b" : "bg-t"}" style="font-size:9px;margin-left:6px">${j.type}</span></div>
+        <div class="meta">Absence du ${j.date_absence || "—"} &bull; Soumis le ${j.date_soumission || "—"}</div>
+        <div class="motif">${j.motif || "Aucun motif fourni"}</div>
+      </div>
+      <div class="justif-actions">
+        <span class="badge ${j.statut === "en_attente" ? "bg-o" : j.statut === "accepte" ? "bg-g" : "bg-r"}">${j.statut}</span>
+        ${
+          j.statut === "en_attente"
+            ? `
+          <button class="btn btn-teal btn-xs" onclick="traiterJustif('${j.id}','accepte')">Accepter</button>
+          <button class="btn btn-danger btn-xs" onclick="traiterJustif('${j.id}','refuse')">Refuser</button>
+        `
+            : ""
+        }
+      </div>
+    </div>
+  `,
+          )
+          .join("");
+      }
+
+      async function traiterJustif(id, decision) {
+        const r = await api("PUT", `/admin/justifications/${id}`, {
+          statut: decision,
+        });
+        if (r.message) {
+          toast(
+            decision === "accepte"
+              ? "Justification acceptee"
+              : "Justification refusee",
+          );
+          loadJustifications();
+        } else toast(r.error || "Erreur", "e");
+      }
+
+      // ══════════ RAPPORTS ══════════
+      async function loadRapports() {
+        try {
+          const filtre =
+            document.getElementById("filter-rapport-date")?.value || "all";
+          const data = await api("GET", "/rapports");
+          let list = data.rapports || [];
+          const now = new Date();
+          if (filtre === "today") {
+            const t = now.toISOString().split("T")[0];
+            list = list.filter((r) => r.date === t);
+          } else if (filtre === "week") {
+            const w = new Date(now - 7 * 86400000);
+            list = list.filter((r) => new Date(r.date) >= w);
+          } else if (filtre === "month") {
+            const m = new Date(now.getFullYear(), now.getMonth(), 1);
+            list = list.filter((r) => new Date(r.date) >= m);
+          }
+          const b = document.getElementById("rapports-body");
+          b.innerHTML = list.length
+            ? list
+                .map(
+                  (r) => `<tr>
+      <td><strong>${r.matiere || "—"}</strong></td>
+      <td>${r.groupe || "—"}</td>
+      <td style="font-family:var(--mono);color:var(--muted)">${r.date || "—"}</td>
+      <td><span class="badge bg-g">${r.nb_presents || 0}</span></td>
+      <td><span class="badge bg-r">${r.nb_absents || 0}</span></td>
+      <td style="font-family:var(--mono);font-weight:700;color:var(--g2)">${r.taux_presence || "—"}</td>
+      <td>${r.prof_present ? '<span class="badge bg-g">Present</span>' : '<span class="badge bg-r">Absent</span>'}</td>
+      <td><div class="actions-cell">
+        <button class="btn btn-ghost btn-xs" onclick="voirRapport('${r.seance_id || r.id}','${r.matiere}','${r.groupe}')">Detail</button>
+      </div></td>
+    </tr>`,
+                )
+                .join("")
+            : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px;font-family:var(--mono)">Aucun rapport pour cette periode</td></tr>';
+        } catch {
+          toast("Erreur chargement rapports", "e");
+        }
+      }
+
+      async function voirRapport(seanceId, matiere, groupe) {
+        document.getElementById("modal-rapport-title").textContent =
+          matiere + " — " + groupe;
+        document.getElementById("modal-rapport-body").innerHTML =
+          '<div style="text-align:center;padding:32px;"><span class="loader"></span></div>';
+        openModal("modal-rapport");
+        try {
+          const [rap, pres] = await Promise.all([
+            fetch(API + "/rapport/" + seanceId).then((r) => r.json()),
+            fetch(API + "/presences/" + seanceId).then((r) => r.json()),
+          ]);
+          const s = rap.stats || {};
+          const presMap = {};
+          (pres.presences || []).forEach((p) => (presMap[p.personne_id] = p));
+          const presents = rap.details?.presents || [];
+          const absents = rap.details?.absents || [];
+          let html = `<div style="display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap">
+      <div style="flex:1;min-width:100px;padding:14px;border:1px solid var(--border);border-radius:10px;text-align:center">
+        <div style="font-family:var(--mono);font-size:24px;color:var(--g3);font-weight:500">${s.presents || 0}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Presents</div>
+      </div>
+      <div style="flex:1;min-width:100px;padding:14px;border:1px solid var(--border);border-radius:10px;text-align:center">
+        <div style="font-family:var(--mono);font-size:24px;color:var(--red);font-weight:500">${s.absents || 0}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Absents</div>
+      </div>
+      <div style="flex:1;min-width:100px;padding:14px;border:1px solid var(--border);border-radius:10px;text-align:center">
+        <div style="font-family:var(--mono);font-size:24px;color:var(--g2);font-weight:500">${s.taux || "—"}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Taux</div>
+      </div>
+    </div>`;
+          if (presents.length) {
+            html += `<p style="font-size:10px;font-family:var(--mono);letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Presents (${presents.length})</p>`;
+            html += presents
+              .map(
+                (e) =>
+                  `<div class="pres-item"><div><div class="pres-name">${e.nom} ${e.prenom}</div><div class="pres-time">${presMap[e.id]?.heure_arrivee || "—"}</div></div><span class="badge bg-g">Present</span></div>`,
+              )
+              .join("");
+          }
+          if (absents.length) {
+            html += `<p style="font-size:10px;font-family:var(--mono);letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin:16px 0 8px">Absents (${absents.length})</p>`;
+            html += absents
+              .map(
+                (e) =>
+                  `<div class="pres-item"><div><div class="pres-name">${e.nom} ${e.prenom}</div></div><span class="badge bg-r">Absent</span></div>`,
+              )
+              .join("");
+          }
+          document.getElementById("modal-rapport-body").innerHTML = html;
+        } catch {
+          document.getElementById("modal-rapport-body").innerHTML =
+            '<p style="color:var(--red);font-family:var(--mono);text-align:center;padding:20px">Erreur de chargement</p>';
+        }
+      }
+
+      async function archiverRapports() {
+        const r = await api("POST", "/admin/archiver-rapports");
+        if (r.message) {
+          toast(r.message, "s");
+          loadRapports();
+        } else toast(r.error || "Erreur", "e");
+      }
+
+      async function loadArchives() {
+        const date = document.getElementById("archive-date").value;
+        const month = document.getElementById("archive-month").value;
+        let url = "/admin/archives?";
+        if (date) url += "date=" + date;
+        else if (month) url += "month=" + month;
+        try {
+          const data = await api("GET", url);
+          const list = data.archives || [];
+          const b = document.getElementById("archives-body");
+          b.innerHTML = list.length
+            ? list
+                .map(
+                  (r) => `<tr>
+      <td><strong>${r.matiere || "—"}</strong></td>
+      <td>${r.groupe || "—"}</td>
+      <td style="font-family:var(--mono);color:var(--muted)">${r.date || "—"}</td>
+      <td><span class="badge bg-g">${r.nb_presents || 0}</span></td>
+      <td><span class="badge bg-r">${r.nb_absents || 0}</span></td>
+      <td style="font-family:var(--mono);font-weight:700;color:var(--g2)">${r.taux_presence || "—"}</td>
+      <td style="font-size:11px;color:var(--muted);font-family:var(--mono)">${r.archive_le || "—"}</td>
+    </tr>`,
+                )
+                .join("")
+            : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;font-family:var(--mono)">Aucune archive pour cette periode</td></tr>';
+        } catch {
+          toast("Erreur chargement archives", "e");
+        }
+      }
+
+      // ── LOGOUT ──
+      function logout() {
+        localStorage.removeItem("user");
+        window.location.href = "/";
+      }
+
+      // ── INIT ──
+      const u = JSON.parse(localStorage.getItem("user") || "{}");
+      if (u.nom) {
+        document.getElementById("av-name").textContent =A1dx
+          `${u.prenom || ""} ${u.nom || ""}`.trim();
+        document.getElementById("av-initials").textContent = (
+          u.prenom?.[0] || "A"
+        ).toUpperCase();
+      }
+      loadDashboard();
+    </script>
+  </body>
+</html>
